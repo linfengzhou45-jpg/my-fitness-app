@@ -8,6 +8,7 @@ const API_URL = '/api'
 export const useDietStore = defineStore('diet', () => {
   // 结构: { '2023-10-27': { breakfast: [], lunch: [], dinner: [], snack: [] } }
   const logs = reactive({})
+  const favorites = reactive([])
 
   const today = computed(() => {
     const date = new Date()
@@ -36,7 +37,7 @@ export const useDietStore = defineStore('diet', () => {
     return total
   })
 
-  // Set logs from backend
+  // Set data from backend
   function setLogs(newLogs) {
       // Clear existing
       for (const key in logs) delete logs[key];
@@ -44,9 +45,14 @@ export const useDietStore = defineStore('diet', () => {
       if (newLogs) Object.assign(logs, newLogs);
   }
 
+  function setFavorites(newFavorites) {
+      favorites.splice(0, favorites.length, ...newFavorites)
+  }
+
   // Reset logs (on logout)
   function reset() {
       for (const key in logs) delete logs[key];
+      favorites.splice(0, favorites.length);
   }
 
   // Sync logs to backend
@@ -56,7 +62,8 @@ export const useDietStore = defineStore('diet', () => {
       
       try {
           await axios.put(`${API_URL}/user/sync`, {
-              dietLogs: logs
+              dietLogs: logs,
+              favoriteFoods: favorites
           }, {
               headers: { Authorization: `Bearer ${userStore.token}` }
           })
@@ -65,11 +72,21 @@ export const useDietStore = defineStore('diet', () => {
       }
   }
 
+  function getAutoMealType() {
+      const hour = new Date().getHours()
+      if (hour >= 5 && hour < 10.5) return 'breakfast'
+      if (hour >= 10.5 && hour < 15) return 'lunch'
+      if (hour >= 17 && hour < 21) return 'dinner'
+      return 'snack'
+  }
+
   function addFood(mealType, food) {
     if (!logs[today.value]) {
       logs[today.value] = { breakfast: [], lunch: [], dinner: [], snack: [] }
     }
-    logs[today.value][mealType].push(food)
+    
+    const targetMeal = mealType || getAutoMealType()
+    logs[today.value][targetMeal].push(food)
     sync()
   }
 
@@ -78,6 +95,28 @@ export const useDietStore = defineStore('diet', () => {
       logs[today.value][mealType].splice(index, 1)
       sync()
     }
+  }
+
+  function toggleFavorite(food) {
+      const index = favorites.findIndex(f => f.name === food.name && f.calories === food.calories)
+      if (index > -1) {
+          favorites.splice(index, 1)
+      } else {
+          // Store a clean copy without extra props
+          favorites.push({
+              name: food.name,
+              calories: food.calories,
+              carbs: food.carbs,
+              protein: food.protein,
+              fat: food.fat,
+              weight: food.weight || 100 // Default reference weight
+          })
+      }
+      sync()
+  }
+
+  function isFavorite(food) {
+      return favorites.some(f => f.name === food.name && f.calories === food.calories)
   }
   
   // AI Feature (Backend)
@@ -115,5 +154,5 @@ export const useDietStore = defineStore('diet', () => {
       }
   }
 
-  return { logs, today, todayIntake, addFood, removeFood, getTodayLog, analyzeFoodWithAI, setLogs, reset }
+  return { logs, favorites, today, todayIntake, addFood, removeFood, getTodayLog, analyzeFoodWithAI, setLogs, setFavorites, reset, toggleFavorite, isFavorite }
 })

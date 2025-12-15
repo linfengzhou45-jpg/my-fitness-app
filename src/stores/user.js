@@ -21,7 +21,7 @@ export const useUserStore = defineStore('user', () => {
 
   const profile = reactive({ ...defaultProfile })
   const weightHistory = reactive([])
-  const isWorkoutDay = ref(false)
+  const workoutSettings = reactive({ active: false, level: 'casual', calories: 300 })
 
   const isLoggedIn = computed(() => !!token.value)
 
@@ -43,8 +43,8 @@ export const useUserStore = defineStore('user', () => {
       case 'cut': baseTarget = Math.round(tdee.value * 0.85); break 
       case 'bulk': baseTarget = Math.round(tdee.value * 1.15); break 
     }
-    if (isWorkoutDay.value) {
-        baseTarget += 300
+    if (workoutSettings.active) {
+        baseTarget += workoutSettings.calories
     }
     return baseTarget
   })
@@ -52,7 +52,7 @@ export const useUserStore = defineStore('user', () => {
   // 宏量营养素目标
   const macros = computed(() => {
     const cals = targetCalories.value
-    const ratios = isWorkoutDay.value 
+    const ratios = workoutSettings.active 
         ? { c: 0.5, p: 0.3, f: 0.2 } 
         : { c: 0.4, p: 0.3, f: 0.3 }
 
@@ -86,7 +86,9 @@ export const useUserStore = defineStore('user', () => {
       // Reset User Store
       Object.assign(profile, defaultProfile)
       weightHistory.splice(0, weightHistory.length)
-      isWorkoutDay.value = false
+      workoutSettings.active = false
+      workoutSettings.level = 'casual'
+      workoutSettings.calories = 300
       
       // Reset Diet Store
       const dietStore = useDietStore()
@@ -116,8 +118,12 @@ export const useUserStore = defineStore('user', () => {
       const dietStore = useDietStore()
       if (userData.dietLogs) {
           dietStore.setLogs(userData.dietLogs)
-      } else {
-          dietStore.reset() // Ensure clean slate if no logs
+      } 
+      if (userData.favoriteFoods) {
+          dietStore.setFavorites(userData.favoriteFoods)
+      }
+      if (!userData.dietLogs && !userData.favoriteFoods) {
+          dietStore.reset() 
       }
   }
 
@@ -154,8 +160,10 @@ export const useUserStore = defineStore('user', () => {
       syncData()
   }
   
-  function toggleWorkoutMode(status) {
-      isWorkoutDay.value = status
+  function setWorkoutMode(active, level, calories) {
+      workoutSettings.active = active
+      if (level) workoutSettings.level = level
+      if (calories) workoutSettings.calories = calories
   }
 
   // Initialize
@@ -165,8 +173,8 @@ export const useUserStore = defineStore('user', () => {
 
   return { 
       token, isLoggedIn, login, register, logout, fetchUser, 
-      profile, weightHistory, isWorkoutDay, 
+      profile, weightHistory, workoutSettings, 
       bmr, tdee, targetCalories, macros, 
-      updateProfile, logWeight, toggleWorkoutMode 
+      updateProfile, logWeight, setWorkoutMode 
   }
 })

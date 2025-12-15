@@ -68,7 +68,8 @@ app.post('/api/auth/register', async (req, res) => {
                  allergies: []
             },
             weightHistory: [],
-            dietLogs: {}
+            dietLogs: {},
+            favoriteFoods: []
         };
         
         users.push(newUser);
@@ -127,7 +128,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
 
 app.put('/api/user/sync', authenticateToken, (req, res) => {
     try {
-        const { profile, weightHistory, dietLogs } = req.body;
+        const { profile, weightHistory, dietLogs, favoriteFoods } = req.body;
         const users = getUsers();
         const userIndex = users.findIndex(u => u.id === req.user.id);
         
@@ -137,6 +138,7 @@ app.put('/api/user/sync', authenticateToken, (req, res) => {
         if (profile) users[userIndex].profile = profile;
         if (weightHistory) users[userIndex].weightHistory = weightHistory;
         if (dietLogs) users[userIndex].dietLogs = dietLogs;
+        if (favoriteFoods) users[userIndex].favoriteFoods = favoriteFoods;
         
         saveUsers(users);
         res.json({ message: '同步成功' });

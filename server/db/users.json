@@ -63,7 +63,17 @@
           }
         ]
       }
-    }
+    },
+    "favoriteFoods": [
+      {
+        "name": "五香鸡腿饭配猪肉丸汤",
+        "calories": 835,
+        "carbs": 50,
+        "protein": 52,
+        "fat": 45,
+        "weight": 100
+      }
+    ]
   },
   {
     "id": "1765776142133",
