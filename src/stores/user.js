@@ -1,0 +1,172 @@
+import { defineStore } from 'pinia'
+import { reactive, computed, ref } from 'vue'
+import axios from 'axios'
+import { useDietStore } from './diet'
+
+const API_URL = '/api'
+
+export const useUserStore = defineStore('user', () => {
+  const token = ref(localStorage.getItem('auth_token') || '')
+  
+  const defaultProfile = {
+    name: 'User',
+    gender: 'male',
+    age: 25,
+    height: 175, 
+    weight: 70, 
+    activityLevel: 1.375, 
+    goal: 'maintain', 
+    allergies: []
+  }
+
+  const profile = reactive({ ...defaultProfile })
+  const weightHistory = reactive([])
+  const isWorkoutDay = ref(false)
+
+  const isLoggedIn = computed(() => !!token.value)
+
+  // 基础代谢率 BMR
+  const bmr = computed(() => {
+    let base = 10 * profile.weight + 6.25 * profile.height - 5 * profile.age
+    return profile.gender === 'male' ? base + 5 : base - 161
+  })
+
+  // 每日总能量消耗 TDEE
+  const tdee = computed(() => {
+    return Math.round(bmr.value * profile.activityLevel)
+  })
+
+  // 目标热量
+  const targetCalories = computed(() => {
+    let baseTarget = tdee.value
+    switch (profile.goal) {
+      case 'cut': baseTarget = Math.round(tdee.value * 0.85); break 
+      case 'bulk': baseTarget = Math.round(tdee.value * 1.15); break 
+    }
+    if (isWorkoutDay.value) {
+        baseTarget += 300
+    }
+    return baseTarget
+  })
+
+  // 宏量营养素目标
+  const macros = computed(() => {
+    const cals = targetCalories.value
+    const ratios = isWorkoutDay.value 
+        ? { c: 0.5, p: 0.3, f: 0.2 } 
+        : { c: 0.4, p: 0.3, f: 0.3 }
+
+    return {
+      carbs: Math.round((cals * ratios.c) / 4),
+      protein: Math.round((cals * ratios.p) / 4),
+      fat: Math.round((cals * ratios.f) / 9)
+    }
+  })
+
+  // Auth Actions
+  async function login(credentials) {
+      const res = await axios.post(`${API_URL}/auth/login`, credentials)
+      token.value = res.data.token
+      localStorage.setItem('auth_token', token.value)
+      
+      handleUserData(res.data.user)
+  }
+
+  async function register(data) {
+      await axios.post(`${API_URL}/auth/register`, data)
+  }
+
+  function logout() {
+      token.value = ''
+      localStorage.removeItem('auth_token')
+      resetState()
+  }
+
+  function resetState() {
+      // Reset User Store
+      Object.assign(profile, defaultProfile)
+      weightHistory.splice(0, weightHistory.length)
+      isWorkoutDay.value = false
+      
+      // Reset Diet Store
+      const dietStore = useDietStore()
+      dietStore.reset()
+  }
+
+  async function fetchUser() {
+      if (!token.value) return
+      try {
+          const res = await axios.get(`${API_URL}/auth/me`, {
+              headers: { Authorization: `Bearer ${token.value}` }
+          })
+          handleUserData(res.data)
+      } catch (e) {
+          console.error("Fetch user failed", e)
+          logout()
+      }
+  }
+
+  function handleUserData(userData) {
+      if (userData.profile) Object.assign(profile, userData.profile)
+      if (userData.weightHistory) {
+          weightHistory.splice(0, weightHistory.length, ...userData.weightHistory)
+      }
+      
+      // Update Diet Store
+      const dietStore = useDietStore()
+      if (userData.dietLogs) {
+          dietStore.setLogs(userData.dietLogs)
+      } else {
+          dietStore.reset() // Ensure clean slate if no logs
+      }
+  }
+
+  const syncData = async () => {
+      if (!isLoggedIn.value) return;
+      try {
+          await axios.put(`${API_URL}/user/sync`, {
+              profile: profile,
+              weightHistory: weightHistory
+          }, {
+              headers: { Authorization: `Bearer ${token.value}` }
+          })
+      } catch (e) {
+          console.error("Sync failed", e)
+      }
+  }
+
+  function updateProfile(newProfile) {
+    Object.assign(profile, newProfile)
+    syncData()
+  }
+
+  function logWeight(weight) {
+      const today = new Date().toISOString().split('T')[0]
+      const existingIndex = weightHistory.findIndex(h => h.date === today)
+      if (existingIndex > -1) {
+          weightHistory[existingIndex].weight = weight
+      } else {
+          weightHistory.push({ date: today, weight })
+      }
+      weightHistory.sort((a, b) => new Date(a.date) - new Date(b.date))
+      
+      profile.weight = weight
+      syncData()
+  }
+  
+  function toggleWorkoutMode(status) {
+      isWorkoutDay.value = status
+  }
+
+  // Initialize
+  if (token.value) {
+      fetchUser()
+  }
+
+  return { 
+      token, isLoggedIn, login, register, logout, fetchUser, 
+      profile, weightHistory, isWorkoutDay, 
+      bmr, tdee, targetCalories, macros, 
+      updateProfile, logWeight, toggleWorkoutMode 
+  }
+})

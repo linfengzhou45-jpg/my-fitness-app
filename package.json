@@ -1,0 +1,29 @@
+{
+  "name": "fitness-diet-system",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "cd server && node index.js",
+    "dev:all": "concurrently \"npm run server\" \"npm run dev\""
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.13.2",
+    "echarts": "^6.0.0",
+    "element-plus": "^2.12.0",
+    "pinia": "^3.0.4",
+    "sass": "^1.96.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "concurrently": "^9.2.1",
+    "vite": "^6.3.5"
+  }
+}

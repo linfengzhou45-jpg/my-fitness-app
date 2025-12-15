@@ -1,0 +1,75 @@
+[
+  {
+    "id": "1765776105434",
+    "username": "001",
+    "email": "",
+    "password": "$2b$10$wdLKLMX2oZqM4yhw90ja8OUZiy7b4vBw/Y2qJEVvTKIPz5oZ8WoQy",
+    "profile": {
+      "name": "001",
+      "gender": "male",
+      "age": 20,
+      "height": 172,
+      "weight": 89,
+      "activityLevel": 1.55,
+      "goal": "cut",
+      "allergies": []
+    },
+    "weightHistory": [
+      {
+        "date": "2025-12-15",
+        "weight": 89
+      }
+    ],
+    "dietLogs": {
+      "2025-12-15": {
+        "breakfast": [
+          {
+            "name": "燕麦蛋白餐",
+            "calories": 174,
+            "carbs": 21,
+            "protein": 16,
+            "fat": 3,
+            "weight": null
+          }
+        ],
+        "lunch": [
+          {
+            "name": "五香鸡腿饭配猪肉丸汤",
+            "calories": 835,
+            "carbs": 50,
+            "protein": 52,
+            "fat": 45,
+            "weight": null
+          }
+        ],
+        "dinner": [],
+        "snack": []
+      }
+    }
+  },
+  {
+    "id": "1765776142133",
+    "username": "002",
+    "email": "",
+    "password": "$2b$10$WwRJCw/QOoz4EPNqZbLQF.hZwiZhsf03aISeUv625UfkBaXfSIXXO",
+    "profile": {
+      "name": "002",
+      "gender": "male",
+      "age": 25,
+      "height": 175,
+      "weight": 70,
+      "activityLevel": 1.375,
+      "goal": "maintain",
+      "allergies": []
+    },
+    "weightHistory": [],
+    "dietLogs": {
+      "2025-12-15": {
+        "breakfast": [],
+        "lunch": [],
+        "dinner": [],
+        "snack": []
+      }
+    }
+  }
+]
