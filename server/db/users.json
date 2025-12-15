@@ -42,8 +42,26 @@
             "weight": null
           }
         ],
-        "dinner": [],
-        "snack": []
+        "dinner": [
+          {
+            "name": "鸭腿饭套餐 (含炸鸡腿、卤豆腐)",
+            "calories": 1360,
+            "carbs": 84,
+            "protein": 85,
+            "fat": 76,
+            "weight": null
+          }
+        ],
+        "snack": [
+          {
+            "name": "蛋白粉",
+            "calories": 61,
+            "carbs": 1,
+            "protein": 12,
+            "fat": 1,
+            "weight": null
+          }
+        ]
       }
     }
   },

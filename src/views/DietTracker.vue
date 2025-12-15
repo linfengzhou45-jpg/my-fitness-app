@@ -78,7 +78,7 @@
         <template #footer>
             <span class="dialog-footer">
                 <el-button @click="dialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="handleAddFood">确认添加</el-button>
+                <el-button type="primary" :loading="isSubmitting" @click="handleAddFood">确认添加</el-button>
             </span>
         </template>
     </el-dialog>
@@ -196,6 +196,7 @@
                     </el-button>
                     <el-button 
                         type="success" 
+                        :loading="isSubmitting"
                         @click="applyAiResult">
                         采纳并添加
                     </el-button>
@@ -208,7 +209,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, nextTick } from 'vue'
 import { useDietStore } from '../stores/diet'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { foodDatabase } from '../data/foodDatabase'
@@ -223,6 +224,7 @@ const currentMealKey = ref('')
 const aiDescription = ref('')
 const aiLoading = ref(false)
 const aiResult = ref(null)
+const isSubmitting = ref(false)
 
 // AI Presets
 const greasiness = ref(null)
@@ -336,22 +338,28 @@ async function handleAiAnalyze() {
     }
 }
 
-function applyAiResult() {
-    if (!aiResult.value) return
+async function applyAiResult() {
+    if (!aiResult.value || isSubmitting.value) return
     
-    // Convert AI result to standard food item structure
-    const foodItem = {
-        name: aiResult.value.name,
-        calories: Number(aiResult.value.calories),
-        carbs: Number(aiResult.value.carbs),
-        protein: Number(aiResult.value.protein),
-        fat: Number(aiResult.value.fat),
-        weight: null // AI estimates total portion, weight is undefined/irrelevant here
+    isSubmitting.value = true
+    try {
+        // Convert AI result to standard food item structure
+        const foodItem = {
+            name: aiResult.value.name,
+            calories: Number(aiResult.value.calories),
+            carbs: Number(aiResult.value.carbs),
+            protein: Number(aiResult.value.protein),
+            fat: Number(aiResult.value.fat),
+            weight: null // AI estimates total portion, weight is undefined/irrelevant here
+        }
+        
+        dietStore.addFood(currentMealKey.value, foodItem)
+        aiDialogVisible.value = false
+        ElMessage.success('已添加至记录')
+        await nextTick()
+    } finally {
+        isSubmitting.value = false
     }
-    
-    dietStore.addFood(currentMealKey.value, foodItem)
-    aiDialogVisible.value = false
-    ElMessage.success('已添加至记录')
 }
 
 function resetForm() {
@@ -386,17 +394,24 @@ function calculateNutrition() {
     }
 }
 
-function handleAddFood() {
-    const foodItem = {
-        name: foodForm.name || '未知食物',
-        calories: foodForm.calories,
-        carbs: foodForm.carbs,
-        protein: foodForm.protein,
-        fat: foodForm.fat,
-        weight: foodForm.weight
+async function handleAddFood() {
+    if (isSubmitting.value) return
+    isSubmitting.value = true
+    try {
+        const foodItem = {
+            name: foodForm.name || '未知食物',
+            calories: foodForm.calories,
+            carbs: foodForm.carbs,
+            protein: foodForm.protein,
+            fat: foodForm.fat,
+            weight: foodForm.weight
+        }
+        dietStore.addFood(currentMealKey.value, foodItem)
+        dialogVisible.value = false
+        await nextTick()
+    } finally {
+        isSubmitting.value = false
     }
-    dietStore.addFood(currentMealKey.value, foodItem)
-    dialogVisible.value = false
 }
 </script>
 
