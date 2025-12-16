@@ -16,8 +16,14 @@ const routes = [
   },
   {
     path: '/',
-    name: 'Dashboard',
-    component: () => import('../views/Dashboard.vue'),
+    name: 'Diet',
+    component: () => import('../views/DietTracker.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/recipes',
+    name: 'Recipes',
+    component: () => import('../views/RecipeLibrary.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -27,9 +33,9 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/diet',
-    name: 'Diet',
-    component: () => import('../views/DietTracker.vue'),
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('../views/Dashboard.vue'),
     meta: { requiresAuth: true }
   }
 ]

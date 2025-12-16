@@ -90,6 +90,14 @@ export const useDietStore = defineStore('diet', () => {
     sync()
   }
 
+  function updateFood(mealType, index, updatedFood) {
+      if (logs[today.value] && logs[today.value][mealType]) {
+          // Keep existing properties if not overwritten, but usually we overwrite the stats
+          logs[today.value][mealType][index] = { ...updatedFood }
+          sync()
+      }
+  }
+
   function removeFood(mealType, index) {
     if (logs[today.value] && logs[today.value][mealType]) {
       logs[today.value][mealType].splice(index, 1)
@@ -154,5 +162,5 @@ export const useDietStore = defineStore('diet', () => {
       }
   }
 
-  return { logs, favorites, today, todayIntake, addFood, removeFood, getTodayLog, analyzeFoodWithAI, setLogs, setFavorites, reset, toggleFavorite, isFavorite }
+  return { logs, favorites, today, todayIntake, addFood, updateFood, removeFood, getTodayLog, analyzeFoodWithAI, setLogs, setFavorites, reset, toggleFavorite, isFavorite }
 })

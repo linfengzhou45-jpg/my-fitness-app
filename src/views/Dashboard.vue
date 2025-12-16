@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard-container">
     <div class="top-bar">
-        <h2>今日概览</h2>
+        <h2>健康数据</h2>
         <div class="actions">
             <el-button type="primary" plain size="small" @click="dialogWeightVisible = true">
                 记录体重
