@@ -6,7 +6,7 @@ import { useDietStore } from './stores/diet'
 import { ElMessage } from 'element-plus'
 import { 
   DataLine, Food, User, Reading, Aim, 
-  Plus, Edit, StarFilled, Star, Search, MagicStick 
+  Plus, Edit, StarFilled, Star, Search, MagicStick, Setting
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -15,6 +15,7 @@ const userStore = useUserStore()
 const dietStore = useDietStore()
 
 const isMobile = ref(false)
+const isAdmin = computed(() => userStore.role === 'admin')
 
 const updateIsMobile = () => {
   isMobile.value = window.innerWidth < 768
@@ -51,7 +52,7 @@ const isSubmitting = ref(false)
 const isEditing = ref(false)
 const editingContext = reactive({ mealType: null, index: -1 })
 
-const foodForm = reactive({ name: '', calories: 0, carbs: 0, protein: 0, fat: 0 })
+const foodForm = reactive({ name: '', image: '', calories: 0, carbs: 0, protein: 0, fat: 0 })
 
 // Provided function for children to call
 function openEditFood(mealType, index, food) {
@@ -191,6 +192,10 @@ async function applyAiResult() {
           <el-icon><User /></el-icon>
           <span>个人档案</span>
         </el-menu-item>
+        <el-menu-item index="/admin" v-if="isAdmin">
+          <el-icon><Setting /></el-icon>
+          <span>后台管理</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -250,6 +255,10 @@ async function applyAiResult() {
              <el-icon><User /></el-icon>
             <span class="mobile-label">我的</span>
           </el-menu-item>
+          <el-menu-item index="/admin" v-if="isAdmin" style="flex: 1">
+             <el-icon><Setting /></el-icon>
+            <span class="mobile-label">后台</span>
+          </el-menu-item>
         </el-menu>
       </div>
     </el-container>
@@ -273,6 +282,9 @@ async function applyAiResult() {
          <el-form :model="foodForm" label-width="80px">
             <el-form-item label="名称">
                 <el-input v-model="foodForm.name" placeholder="例如: 燕麦拿铁" />
+            </el-form-item>
+            <el-form-item label="图片链接">
+                <el-input v-model="foodForm.image" placeholder="https://... (可选)" />
             </el-form-item>
             <el-form-item label="热量">
                 <el-input-number v-model="foodForm.calories" :min="0" style="width: 100%" />
@@ -417,58 +429,79 @@ body {
 /* Global FAB Styles */
 .fab-container {
     position: fixed;
-    bottom: 80px; 
-    right: 20px;
+    bottom: 90px; 
+    right: 25px;
     display: flex;
     flex-direction: row;
-    gap: 12px;
+    gap: 15px;
     z-index: 999;
-    
-    /* Box container styling (Version 2) */
-    background-color: #fff;
-    padding: 10px 15px;
-    border-radius: 50px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-    border: 1px solid #f0f0f0;
+    pointer-events: none;
 }
 .fab-btn {
+    pointer-events: auto;
     width: 56px !important;
     height: 56px !important;
-    min-width: 56px !important;
-    min-height: 56px !important;
-    max-width: 56px !important;
-    max-height: 56px !important;
-    font-size: 24px;
-    padding: 0 !important;
-    margin: 0 !important;
+    border-radius: 50% !important;
+    border: none !important;
+    font-size: 24px !important;
+    color: white !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-    border-radius: 50% !important;
-    flex-shrink: 0 !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s !important;
+}
+.fab-btn:hover {
+    transform: translateY(-5px) scale(1.1) !important;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35) !important;
+}
+.fab-btn:active {
+    transform: scale(0.95) !important;
+}
+
+.ai-fab {
+    background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%) !important;
+}
+
+.add-fab {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important;
 }
 
 /* Dialog Styles */
 .add-options {
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
+    gap: 20px;
     padding: 20px;
 }
 .option-card {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
-    padding: 15px;
-    border-radius: 8px;
-    transition: background 0.2s;
+    padding: 20px;
+    width: 110px;
+    height: 110px;
+    border-radius: 20px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
 }
-.option-card:active { background: #f5f7fa; }
+.option-card:hover { 
+    background: #fff;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    border-color: #38f9d7;
+}
+.option-card:active { transform: scale(0.95); }
+
 .icon-box {
     font-size: 32px;
-    margin-bottom: 8px;
-    color: #409eff;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 .search-bar { margin-bottom: 15px; }
 .favorite-item {
@@ -480,22 +513,28 @@ body {
 }
 .fav-name { font-weight: bold; }
 .fav-meta { font-size: 12px; color: #666; }
+
 .ai-result {
-    background: #f0f9eb;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 15px;
+    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+    border-left: 5px solid #a18cd1;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 .ai-summary {
     display: flex;
     justify-content: space-between;
     font-weight: bold;
     margin-bottom: 10px;
+    color: #2c3e50;
 }
-.highlight { color: #67c23a; font-size: 18px; }
+.highlight { color: #a18cd1; font-size: 20px; }
 .sub-label { text-align: center; font-size: 12px; color: #909399; margin-top: 5px; }
 
 @media (max-width: 768px) {
     .responsive-dialog { width: 95% !important; }
+    .fab-btn { width: 48px !important; height: 48px !important; font-size: 20px !important; }
+    .fab-container { bottom: 80px; right: 15px; }
 }
 </style>

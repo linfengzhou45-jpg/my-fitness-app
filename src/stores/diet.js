@@ -9,11 +9,21 @@ export const useDietStore = defineStore('diet', () => {
   // 结构: { '2023-10-27': { breakfast: [], lunch: [], dinner: [], snack: [] } }
   const logs = reactive({})
   const favorites = reactive([])
+  const systemRecipes = reactive([])
 
   const today = computed(() => {
     const date = new Date()
     return date.toISOString().split('T')[0]
   })
+  
+  async function fetchRecipes() {
+      try {
+          const res = await axios.get(`${API_URL}/recipes`)
+          systemRecipes.splice(0, systemRecipes.length, ...res.data)
+      } catch (e) {
+          console.error("Failed to fetch recipes", e)
+      }
+  }
 
   function getTodayLog() {
     if (!logs[today.value]) {
@@ -126,6 +136,13 @@ export const useDietStore = defineStore('diet', () => {
   function isFavorite(food) {
       return favorites.some(f => f.name === food.name && f.calories === food.calories)
   }
+
+  function updateFavorite(index, updatedFood) {
+      if (index >= 0 && index < favorites.length) {
+          favorites[index] = { ...updatedFood }
+          sync()
+      }
+  }
   
   // AI Feature (Backend)
   async function analyzeFoodWithAI(description) {
@@ -162,5 +179,5 @@ export const useDietStore = defineStore('diet', () => {
       }
   }
 
-  return { logs, favorites, today, todayIntake, addFood, updateFood, removeFood, getTodayLog, analyzeFoodWithAI, setLogs, setFavorites, reset, toggleFavorite, isFavorite }
+  return { logs, favorites, systemRecipes, today, todayIntake, addFood, updateFood, removeFood, getTodayLog, analyzeFoodWithAI, setLogs, setFavorites, reset, toggleFavorite, isFavorite, updateFavorite, fetchRecipes }
 })

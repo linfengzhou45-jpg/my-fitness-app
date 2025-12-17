@@ -4,13 +4,14 @@
     "username": "001",
     "email": "",
     "password": "$2b$10$wdLKLMX2oZqM4yhw90ja8OUZiy7b4vBw/Y2qJEVvTKIPz5oZ8WoQy",
+    "role": "user",
     "profile": {
-      "name": "001",
+      "name": "宇宙无敌大肌霸",
       "gender": "male",
       "age": 20,
       "height": 172,
       "weight": 89,
-      "activityLevel": 1.55,
+      "activityLevel": 1.725,
       "goal": "cut",
       "allergies": []
     },
@@ -62,24 +63,66 @@
             "weight": null
           }
         ]
+      },
+      "2025-12-17": {
+        "breakfast": [],
+        "lunch": [
+          {
+            "name": "塔斯汀鸡腿堡套餐(汉堡+半杯可乐+炸鸡腿)",
+            "calories": 980,
+            "carbs": 85,
+            "protein": 45,
+            "fat": 53
+          },
+          {
+            "name": "燕麦 (20g生重)",
+            "calories": 76,
+            "carbs": 13.2,
+            "protein": 2.8,
+            "fat": 1.4
+          }
+        ],
+        "dinner": [],
+        "snack": []
       }
     },
     "favoriteFoods": [
       {
         "name": "五香鸡腿饭配猪肉丸汤",
+        "image": "/uploads/1765950907758-546404642.jpeg",
         "calories": 835,
         "carbs": 50,
         "protein": 52,
         "fat": 45,
+        "baseWeight": 100
+      },
+      {
+        "name": "塔斯汀鸡腿堡套餐(汉堡+半杯可乐+炸鸡腿)",
+        "calories": 980,
+        "carbs": 85,
+        "protein": 45,
+        "fat": 53,
         "weight": 100
+      },
+      {
+        "name": "燕麦 (20g生重)",
+        "image": "",
+        "calories": 76,
+        "carbs": 13.2,
+        "protein": 2.8,
+        "fat": 1.4,
+        "baseWeight": 20
       }
-    ]
+    ],
+    "avatar": "/uploads/1765950831199-952491776.jpg",
+    "motto": "致力于更健康的自己"
   },
   {
     "id": "1765776142133",
     "username": "002",
     "email": "",
     "password": "$2b$10$WwRJCw/QOoz4EPNqZbLQF.hZwiZhsf03aISeUv625UfkBaXfSIXXO",
+    "role": "user",
     "profile": {
       "name": "002",
       "gender": "male",
@@ -99,5 +142,25 @@
         "snack": []
       }
     }
+  },
+  {
+    "id": "1765950508350",
+    "username": "admin",
+    "email": "",
+    "password": "$2b$10$vhO1HgnoDfiUpzyuJFmk6Or5nvQKYQ9KZUopzXtQF7vbSgSPGh3n.",
+    "role": "admin",
+    "profile": {
+      "name": "admin",
+      "gender": "male",
+      "age": 25,
+      "height": 175,
+      "weight": 70,
+      "activityLevel": 1.375,
+      "goal": "maintain",
+      "allergies": []
+    },
+    "weightHistory": [],
+    "dietLogs": {},
+    "favoriteFoods": []
   }
 ]

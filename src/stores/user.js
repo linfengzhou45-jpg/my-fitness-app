@@ -22,6 +22,11 @@ export const useUserStore = defineStore('user', () => {
   const profile = reactive({ ...defaultProfile })
   const weightHistory = reactive([])
   const workoutSettings = reactive({ active: false, level: 'casual', calories: 300 })
+  
+  // New Fields
+  const role = ref('user')
+  const avatar = ref('')
+  const motto = ref('致力于更健康的自己')
 
   const isLoggedIn = computed(() => !!token.value)
 
@@ -89,6 +94,9 @@ export const useUserStore = defineStore('user', () => {
       workoutSettings.active = false
       workoutSettings.level = 'casual'
       workoutSettings.calories = 300
+      role.value = 'user'
+      avatar.value = ''
+      motto.value = '致力于更健康的自己'
       
       // Reset Diet Store
       const dietStore = useDietStore()
@@ -113,6 +121,9 @@ export const useUserStore = defineStore('user', () => {
       if (userData.weightHistory) {
           weightHistory.splice(0, weightHistory.length, ...userData.weightHistory)
       }
+      if (userData.role) role.value = userData.role
+      if (userData.avatar) avatar.value = userData.avatar
+      if (userData.motto) motto.value = userData.motto
       
       // Update Diet Store
       const dietStore = useDietStore()
@@ -132,7 +143,9 @@ export const useUserStore = defineStore('user', () => {
       try {
           await axios.put(`${API_URL}/user/sync`, {
               profile: profile,
-              weightHistory: weightHistory
+              weightHistory: weightHistory,
+              avatar: avatar.value,
+              motto: motto.value
           }, {
               headers: { Authorization: `Bearer ${token.value}` }
           })
@@ -144,6 +157,16 @@ export const useUserStore = defineStore('user', () => {
   function updateProfile(newProfile) {
     Object.assign(profile, newProfile)
     syncData()
+  }
+  
+  function updateAvatar(url) {
+      avatar.value = url
+      syncData()
+  }
+  
+  function updateMotto(text) {
+      motto.value = text
+      syncData()
   }
 
   function logWeight(weight) {
@@ -173,8 +196,8 @@ export const useUserStore = defineStore('user', () => {
 
   return { 
       token, isLoggedIn, login, register, logout, fetchUser, 
-      profile, weightHistory, workoutSettings, 
+      profile, weightHistory, workoutSettings, role, avatar, motto,
       bmr, tdee, targetCalories, macros, 
-      updateProfile, logWeight, setWorkoutMode 
+      updateProfile, updateAvatar, updateMotto, logWeight, setWorkoutMode 
   }
 })
