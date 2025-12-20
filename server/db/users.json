@@ -11,9 +11,10 @@
       "age": 20,
       "height": 172,
       "weight": 89,
-      "activityLevel": 1.725,
+      "activityLevel": 1.45,
       "goal": "cut",
-      "allergies": []
+      "allergies": [],
+      "customCalories": null
     },
     "weightHistory": [
       {

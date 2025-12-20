@@ -1,481 +1,387 @@
 <template>
-  <div class="dashboard-container">
-    <div class="dashboard-header animate-fade-in">
-        <div class="header-text">
-            <h2>健康概览</h2>
-            <p>Today's Health Summary</p>
-        </div>
-        <div class="actions">
-            <el-button type="primary" round :icon="Edit" @click="dialogWeightVisible = true">
-                记录体重
-            </el-button>
-        </div>
-    </div>
-    
-    <!-- Workout Settings -->
-    <el-card class="modern-card workout-card animate-slide-up" shadow="hover">
-        <div class="workout-header">
-            <div class="header-left">
-                 <div class="icon-wrapper bg-orange">
-                    <el-icon><Stopwatch /></el-icon>
-                 </div>
-                 <span class="card-title">运动模式</span>
-            </div>
-            <el-switch v-model="workoutActive" active-color="#ff9f43" @change="handleWorkoutActiveChange" />
-        </div>
-        
-        <div v-if="workoutActive" class="workout-controls">
-            <div class="intensity-presets">
-                <el-radio-group v-model="workoutLevel" size="default" @change="handleLevelChange" fill="#ff9f43">
-                    <el-radio-button label="casual">休闲</el-radio-button>
-                    <el-radio-button label="moderate">适量</el-radio-button>
-                    <el-radio-button label="intense">较强</el-radio-button>
-                    <el-radio-button label="extreme">极限</el-radio-button>
-                </el-radio-group>
-            </div>
-            <div class="slider-container">
-                <span class="slider-label">额外消耗: <strong>{{ workoutCalories }}</strong> kcal</span>
-                <el-slider 
-                    v-model="workoutCalories" 
-                    :min="100" 
-                    :max="1000" 
-                    :step="50" 
-                    @change="handleSliderChange" 
-                    style="flex: 1; margin-left: 20px;" 
-                />
-            </div>
-        </div>
-    </el-card>
+  <div class="bento-dashboard">
+    <!-- Header -->
+    <header class="dashboard-head">
+      <div>
+        <h1 class="greeting">早安, {{ userStore.profile.name || 'Champion' }}! ☀️</h1>
+        <p class="subtitle">让今天的每一卡路里都算数。</p>
+      </div>
+      <button class="action-btn" @click="dialogWeightVisible = true">
+         <el-icon><ScaleToOriginal /></el-icon> 记体重
+      </button>
+    </header>
 
-    <el-row :gutter="32" class="main-stats-row">
-      <!-- Calories & Macros -->
-      <el-col :xs="24" :lg="8" class="animate-slide-up delay-1">
-        <el-card class="modern-card calorie-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-                <div class="header-left">
-                    <div class="icon-wrapper bg-blue">
-                        <el-icon><Odometer /></el-icon>
-                    </div>
-                    <span>热量摄入</span>
-                </div>
+    <!-- Bento Grid (Mobile Only Layout) -->
+    <div class="bento-grid">
+      <!-- 1. Hero: Calories -->
+      <div class="bento-card calorie-hero animate-pop delay-1">
+         <div class="hero-content">
+            <div class="hero-text">
+                <span class="label">今日热量</span>
+                <span class="big-val">{{ todayIntake.calories }}</span>
+                <span class="target">/ {{ targetCalories }} kcal</span>
             </div>
-          </template>
-          
-          <div class="calorie-display">
-            <div class="number-display">
-                <span class="current">{{ todayIntake.calories }}</span>
-                <span class="divider">/</span>
-                <span class="target">{{ targetCalories }}</span>
-                <span class="unit">kcal</span>
+            <div class="ring-wrapper">
+                 <el-progress 
+                    type="dashboard" 
+                    :percentage="Number(Math.min((todayIntake.calories / targetCalories) * 100, 100).toFixed(1))" 
+                    :width="110"
+                    :stroke-width="10"
+                    :color="caloriesStatusColor"
+                >
+                    <template #default="{ percentage }">
+                        <div class="ring-inner">
+                            <span class="ring-pct">{{ percentage }}%</span>
+                        </div>
+                    </template>
+                </el-progress>
             </div>
-            <el-progress 
-                :percentage="Number(Math.min((todayIntake.calories / targetCalories) * 100, 100).toFixed(1))" 
-                :status="caloriesStatus"
-                :stroke-width="20"
-                :show-text="false"
-                class="main-progress"
-            />
-             <div class="tips-container">
-                <div class="tips warning" v-if="todayIntake.calories > targetCalories">
-                    <el-icon><Warning /></el-icon> 
-                    <span>已超标 {{ todayIntake.calories - targetCalories }} kcal</span>
-                </div>
-                <div class="tips success" v-else>
-                    <el-icon><CircleCheck /></el-icon>
-                    <span>剩余 {{ targetCalories - todayIntake.calories }} kcal</span>
-                </div>
-            </div>
+         </div>
+         <div class="mobile-hero-status">{{ getCalorieDiffText }}</div>
+      </div>
+
+      <!-- 2. Workout Toggle -->
+      <div class="bento-card workout-tile animate-pop delay-2" :class="{ active: workoutActive }" @click="toggleWorkout">
+          <div class="w-header">
+              <div class="w-status-icon">
+                  <el-icon><Stopwatch /></el-icon>
+              </div>
+              <div class="w-text-content">
+                  <span class="w-label">运动模式</span>
+                  <span class="w-state">{{ workoutActive ? '进行中' : '休息中' }}</span>
+              </div>
+              <el-switch v-model="workoutActive" active-color="#00b894" inactive-color="#636e72" @click.stop size="small" />
           </div>
           
-          <el-divider class="custom-divider">营养素分布</el-divider>
-           <BaseChart :options="macroPieOptions" height="220px" />
-        </el-card>
-      </el-col>
+           <div v-if="workoutActive" class="w-controls" @click.stop>
+                <div class="w-cal-display">
+                    <span class="cal-val">{{ workoutCalories }}</span>
+                    <span class="cal-unit">kcal</span>
+                </div>
+                <div class="w-slider-wrap">
+                    <el-slider 
+                        v-model="workoutCalories" 
+                        :min="50" 
+                        :max="1500" 
+                        :step="10" 
+                        :show-tooltip="false"
+                        size="small"
+                        @change="updateWorkout"
+                    />
+                </div>
+           </div>
+           <div v-else class="w-placeholder">
+               点击开启以记录额外消耗
+           </div>
+      </div>
 
-      <!-- Details & Trends -->
-      <el-col :xs="24" :lg="16" class="animate-slide-up delay-2">
-        <!-- Macros Progress -->
-        <el-card class="modern-card mb-20" shadow="hover">
-          <template #header>
-            <div class="card-header">
-                <div class="header-left">
-                    <div class="icon-wrapper bg-green">
-                        <el-icon><PieChart /></el-icon>
-                    </div>
-                    <span>营养素进度</span>
-                </div>
-            </div>
-          </template>
-          <el-row :gutter="20" class="macros-container">
-            <el-col :span="8">
-              <div class="macro-item">
-                <el-progress type="dashboard" :width="100" :percentage="getPercentage(todayIntake.carbs, macros.carbs)" color="#409eff">
-                  <template #default="{ percentage }">
-                    <div class="macro-val">{{ todayIntake.carbs }}g</div>
-                    <div class="macro-target">/ {{ macros.carbs }}g</div>
-                  </template>
-                </el-progress>
-                <div class="macro-label">碳水化合物</div>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="macro-item">
-                <el-progress type="dashboard" :width="100" :percentage="getPercentage(todayIntake.protein, macros.protein)" color="#67c23a">
-                  <template #default="{ percentage }">
-                    <div class="macro-val">{{ todayIntake.protein }}g</div>
-                    <div class="macro-target">/ {{ macros.protein }}g</div>
-                  </template>
-                </el-progress>
-                <div class="macro-label">蛋白质</div>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="macro-item">
-                <el-progress type="dashboard" :width="100" :percentage="getPercentage(todayIntake.fat, macros.fat)" color="#e6a23c">
-                  <template #default="{ percentage }">
-                    <div class="macro-val">{{ todayIntake.fat }}g</div>
-                    <div class="macro-target">/ {{ macros.fat }}g</div>
-                  </template>
-                </el-progress>
-                <div class="macro-label">脂肪</div>
-              </div>
-            </el-col>
-          </el-row>
-        </el-card>
+      <!-- 3. Macros (Row of 3) -->
+      <div class="bento-card macro-card carb animate-pop delay-3">
+         <div class="icon-bubble blue"><el-icon><IceCream /></el-icon></div>
+         <div class="macro-info">
+            <span class="m-label">碳水</span>
+            <span class="m-val">{{ todayIntake.carbs }}<small>g</small></span>
+         </div>
+      </div>
+      
+      <div class="bento-card macro-card protein animate-pop delay-3">
+         <div class="icon-bubble green"><el-icon><Chicken /></el-icon></div>
+         <div class="macro-info">
+            <span class="m-label">蛋白</span>
+            <span class="m-val">{{ todayIntake.protein }}<small>g</small></span>
+         </div>
+      </div>
 
-        <!-- Weight Chart -->
-        <el-card class="modern-card" shadow="hover">
-            <template #header>
-                <div class="card-header">
-                    <div class="header-left">
-                        <div class="icon-wrapper bg-purple">
-                            <el-icon><TrendCharts /></el-icon>
-                        </div>
-                        <span>体重趋势</span>
-                    </div>
-                </div>
-            </template>
-            <BaseChart :options="weightChartOptions" height="250px" />
-        </el-card>
-      </el-col>
-    </el-row>
+      <div class="bento-card macro-card fat animate-pop delay-3">
+         <div class="icon-bubble orange"><el-icon><Burger /></el-icon></div>
+         <div class="macro-info">
+            <span class="m-label">脂肪</span>
+            <span class="m-val">{{ todayIntake.fat }}<small>g</small></span>
+         </div>
+      </div>
 
-    <!-- History Summary -->
-    <el-card class="modern-card mt-20 animate-slide-up delay-3" shadow="hover">
-        <template #header>
-            <div class="card-header">
-                <div class="header-left">
-                     <div class="icon-wrapper bg-gray">
-                        <el-icon><Calendar /></el-icon>
-                    </div>
-                    <span>近期概况</span>
-                </div>
-                <span class="subtitle">仅展示热量结余</span>
-            </div>
-        </template>
-        <div class="history-list">
-             <div v-for="h in historyData" :key="h.date" class="history-item">
-                <span class="date">{{ h.date }}</span>
-                <div class="balance-tag" :class="h.balance >= 0 ? 'is-success' : 'is-warning'">
-                    {{ h.balance >= 0 ? '余量' : '超标' }}
-                    <strong>{{ Math.abs(h.balance) }}</strong> kcal
-                </div>
+      <!-- 4. Weight Chart -->
+      <div class="bento-card weight-tile animate-pop delay-4">
+         <div class="tile-header">
+             <h3>体重趋势</h3>
+             <span class="trend-badge">30天</span>
+         </div>
+         <div class="chart-wrapper">
+             <BaseChart :options="weightChartOptions" height="100%" width="100%" />
+         </div>
+      </div>
+
+      <!-- 5. History -->
+      <div class="bento-card history-tile animate-pop delay-5">
+         <h3>近期结余</h3>
+         <div class="history-scroll">
+             <div v-for="h in historyData" :key="h.date" class="h-row">
+                 <div class="h-date">
+                     <span class="d-day">{{ h.date.split('-')[2] }}</span>
+                     <span class="d-month">{{ h.date.split('-')[1] }}月</span>
+                 </div>
+                 <div class="h-val" :class="h.balance >= 0 ? 'good' : 'bad'">
+                     {{ h.balance >= 0 ? '+' : '' }}{{ h.balance }}
+                 </div>
              </div>
-             <div v-if="historyData.length === 0" class="no-data">
-                 <el-empty description="暂无历史数据" image-size="60" />
-             </div>
-        </div>
-    </el-card>
+             <el-empty v-if="historyData.length === 0" description="No Data" :image-size="60" />
+         </div>
+      </div>
+    </div>
 
-    <!-- Log Weight Dialog -->
-    <el-dialog v-model="dialogWeightVisible" title="记录今日体重" width="320px" center destroy-on-close class="custom-dialog">
-        <div class="weight-input-container">
+    <!-- Weight Dialog -->
+    <el-dialog v-model="dialogWeightVisible" title="记录体重" width="300px" center class="glass-dialog" destroy-on-close>
+        <div class="w-input-area">
              <el-input-number v-model="newWeight" :precision="1" :step="0.1" :min="30" :max="300" size="large" />
              <span class="unit">kg</span>
         </div>
         <template #footer>
-            <span class="dialog-footer">
-                <el-button @click="dialogWeightVisible = false" round>取消</el-button>
-                <el-button type="primary" @click="handleLogWeight" round>保存记录</el-button>
-            </span>
+            <el-button type="primary" @click="handleLogWeight" size="large" round style="width: 100%">保存</el-button>
         </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useUserStore } from '../stores/user'
 import { useDietStore } from '../stores/diet'
 import { storeToRefs } from 'pinia'
 import BaseChart from '../components/BaseChart.vue'
 import { ElMessage } from 'element-plus'
-import { Edit, Stopwatch, Odometer, Warning, CircleCheck, PieChart, TrendCharts, Calendar } from '@element-plus/icons-vue'
+import { ScaleToOriginal, Stopwatch, IceCream, Chicken, Burger } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
 const dietStore = useDietStore()
-
-const { targetCalories, macros, workoutSettings, weightHistory } = storeToRefs(userStore)
+const { targetCalories, workoutSettings, weightHistory } = storeToRefs(userStore)
 const { todayIntake, logs, today } = storeToRefs(dietStore)
 
 const dialogWeightVisible = ref(false)
 const newWeight = ref(userStore.profile.weight)
 
-// Workout Local State
+// Workout Logic
 const workoutActive = ref(workoutSettings.value.active)
-const workoutLevel = ref(workoutSettings.value.level)
 const workoutCalories = ref(workoutSettings.value.calories)
 
-// Sync local state to store
-const updateWorkoutSettings = () => {
-    userStore.setWorkoutMode(workoutActive.value, workoutLevel.value, workoutCalories.value)
+const updateWorkout = () => {
+    userStore.setWorkoutMode(workoutActive.value, null, workoutCalories.value)
+}
+const toggleWorkout = () => {
+    // Prevent toggle if clicking controls (handled by stop modifiers, but safe to check)
 }
 
-function handleWorkoutActiveChange() {
-    updateWorkoutSettings()
-    ElMessage.info(workoutActive.value ? '已开启运动模式' : '已关闭运动模式')
-}
-
-function handleLevelChange(val) {
-    const presets = { casual: 200, moderate: 400, intense: 600, extreme: 800 }
-    if (presets[val]) {
-        workoutCalories.value = presets[val]
-        updateWorkoutSettings()
-    }
-}
-
-function handleSliderChange() {
-    updateWorkoutSettings()
-}
-
-// Watch store changes to update local (in case changed elsewhere)
 watch(workoutSettings, (newVal) => {
     workoutActive.value = newVal.active
-    workoutLevel.value = newVal.level
     workoutCalories.value = newVal.calories
 }, { deep: true })
 
+watch(workoutActive, (val) => {
+    updateWorkout()
+})
 
-const caloriesStatus = computed(() => {
+// Visuals
+const caloriesStatusColor = computed(() => {
   const p = (todayIntake.value.calories / targetCalories.value) * 100
-  if (p > 100) return 'exception'
-  if (p > 85) return 'warning'
-  return 'success'
+  if (p > 100) return '#ff7675'
+  if (p > 85) return '#fdcb6e'
+  return '#00b894'
+})
+const getCalorieDiffText = computed(() => {
+    const diff = targetCalories.value - todayIntake.value.calories
+    return diff >= 0 ? `剩余 ${diff}` : `超 ${Math.abs(diff)}`
+})
+
+const historyData = computed(() => {
+    const days = []
+    const sorted = Object.keys(logs.value).sort().reverse().slice(0, 10)
+    sorted.forEach(date => {
+        if (date === today.value) return
+        let cal = 0
+        Object.values(logs.value[date]).forEach(m => m.forEach(i => cal += Number(i.calories)))
+        days.push({ date, balance: targetCalories.value - cal })
+    })
+    return days
+})
+
+const weightChartOptions = computed(() => {
+    const dates = weightHistory.value.map(i => i.date.slice(5))
+    const weights = weightHistory.value.map(i => i.weight)
+    return {
+        grid: { top: 10, bottom: 20, left: 0, right: 0 },
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: dates, show: false },
+        yAxis: { type: 'value', min: 'dataMin', show: false },
+        series: [{
+            data: weights, type: 'line', smooth: true, showSymbol: false,
+            lineStyle: { width: 4, color: '#6c5ce7' },
+            areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{offset: 0, color: 'rgba(108,92,231,0.2)'}, {offset: 1, color: 'rgba(108,92,231,0)'}] } }
+        }]
+    }
 })
 
 function handleLogWeight() {
     userStore.logWeight(newWeight.value)
     dialogWeightVisible.value = false
-    ElMessage.success('体重记录成功')
+    ElMessage.success('Saved')
 }
-
-function getPercentage(current, target) {
-  if (target === 0) return 0
-  return Math.min(Math.round((current / target) * 100), 100)
-}
-
-// History Logic
-const historyData = computed(() => {
-    // Get past 7 days excluding today
-    const days = []
-    const sortedDates = Object.keys(logs.value).sort().reverse()
-    const baseTarget = targetCalories.value 
-    
-    sortedDates.forEach(date => {
-        if (date === today.value) return // Skip today
-        
-        const dayLog = logs.value[date]
-        let dayCals = 0
-        Object.values(dayLog).forEach(meal => {
-            meal.forEach(item => dayCals += Number(item.calories))
-        })
-        
-        days.push({
-            date,
-            balance: baseTarget - dayCals
-        })
-    })
-    return days.slice(0, 7) // Show last 7 entries
-})
-
-// Chart Options
-const macroPieOptions = computed(() => ({
-    tooltip: { trigger: 'item' },
-    legend: { bottom: '0%', left: 'center', icon: 'circle' },
-    series: [
-        {
-            name: '摄入来源',
-            type: 'pie',
-            radius: ['45%', '70%'],
-            avoidLabelOverlap: false,
-            itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
-            label: { show: false, position: 'center' },
-            emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
-            labelLine: { show: false },
-            data: [
-                { value: todayIntake.value.carbs * 4, name: '碳水', itemStyle: { color: '#409eff' } },
-                { value: todayIntake.value.protein * 4, name: '蛋白质', itemStyle: { color: '#67c23a' } },
-                { value: todayIntake.value.fat * 9, name: '脂肪', itemStyle: { color: '#e6a23c' } }
-            ]
-        }
-    ]
-}))
-
-const weightChartOptions = computed(() => {
-    const dates = weightHistory.value.map(item => item.date)
-    const weights = weightHistory.value.map(item => item.weight)
-    
-    return {
-        tooltip: { 
-            trigger: 'axis',
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderColor: '#eee',
-            textStyle: { color: '#333' }
-        },
-        grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
-        xAxis: { 
-            type: 'category', 
-            data: dates,
-            axisLine: { show: false },
-            axisTick: { show: false },
-            axisLabel: { color: '#999' }
-        },
-        yAxis: { 
-            type: 'value', 
-            min: 'dataMin', 
-            scale: true,
-            splitLine: { lineStyle: { type: 'dashed', color: '#eee' } }
-        }, 
-        series: [{
-            data: weights,
-            type: 'line',
-            smooth: true,
-            symbolSize: 8,
-            lineStyle: { color: '#8e44ad', width: 3 },
-            itemStyle: { color: '#8e44ad', borderWidth: 2, borderColor: '#fff' },
-            areaStyle: { 
-                color: {
-                    type: 'linear',
-                    x: 0, y: 0, x2: 0, y2: 1,
-                    colorStops: [{ offset: 0, color: 'rgba(142, 68, 173, 0.2)' }, { offset: 1, color: 'rgba(142, 68, 173, 0)' }]
-                }
-            }
-        }]
-    }
-})
 </script>
 
 <style scoped>
-.dashboard-container {
-    padding-bottom: 30px;
-    max-width: 1200px;
+.bento-dashboard {
+    padding-bottom: 100px;
+    width: 100%;
     margin: 0 auto;
 }
 
-/* Header Styles */
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-    padding: 10px 5px;
+.dashboard-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; padding: 0 5px;
 }
-.header-text h2 { margin: 0; font-size: 24px; color: #2c3e50; }
-.header-text p { margin: 5px 0 0; color: #7f8c8d; font-size: 14px; }
+.greeting { 
+    font-size: 24px; font-weight: 800; margin: 0; 
+    background: linear-gradient(135deg, #2d3436 0%, #636e72 100%); 
+    -webkit-background-clip: text; color: transparent; 
+    letter-spacing: -0.5px;
+}
+.subtitle { margin: 2px 0 0; color: #b2bec3; font-weight: 500; font-size: 13px; }
+.action-btn {
+    padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.6); 
+    background: rgba(255,255,255,0.5); backdrop-filter: blur(10px);
+    font-weight: 700; color: #2d3436; cursor: pointer;
+    display: flex; align-items: center; gap: 5px; transition: all 0.3s;
+    font-size: 13px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.action-btn:hover { background: white; }
 
-/* Common Card Styles */
-.modern-card {
+/* BENTO GRID SYSTEM (MOBILE ONLY) */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: minmax(100px, auto);
+    gap: 15px;
+    grid-template-areas: 
+        "hero hero hero"
+        "work work work"
+        "carb prot fat"
+        "weight weight weight"
+        "hist hist hist";
+}
+
+.bento-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    border-radius: 24px; padding: 15px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Grid Areas */
+.calorie-hero { grid-area: hero; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 20px; }
+.workout-tile { grid-area: work; display: flex; flex-direction: column; justify-content: space-between; padding: 15px 20px; }
+.macro-card { grid-column: span 1; grid-row: span 1; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 5px; padding: 12px; }
+.carb { grid-area: carb; }
+.prot { grid-area: prot; }
+.fat { grid-area: fat; }
+.weight-tile { grid-area: weight; min-height: 180px; display: flex; flex-direction: column; }
+.history-tile { grid-area: hist; min-height: 200px; }
+
+/* 1. Hero Styles */
+.hero-content { display: flex; justify-content: space-between; width: 100%; align-items: center; z-index: 1; }
+.hero-text { display: flex; flex-direction: column; }
+.hero-text .label { font-size: 12px; color: #b2bec3; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px; }
+.hero-text .big-val { font-size: 42px; font-weight: 800; line-height: 1; color: #2d3436; letter-spacing: -1px; }
+.hero-text .target { font-size: 14px; color: #636e72; font-family: monospace; font-weight: 600; }
+.ring-inner { display: flex; flex-direction: column; align-items: center; }
+.ring-pct { font-size: 20px; font-weight: 800; color: #2d3436; }
+.mobile-hero-status {
+    position: absolute; bottom: 10px; right: 20px;
+    font-size: 12px; font-weight: 700; color: #2d3436;
+    padding: 4px 10px; border-radius: 20px;
+    background: rgba(255,255,255,0.5);
+    backdrop-filter: blur(5px);
+}
+
+/* 2. Workout Styles */
+.workout-tile { 
+    background: #2d3436 !important; /* Force dark */
+    color: white; 
     border: none;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-    transition: transform 0.3s, box-shadow 0.3s;
-    overflow: hidden;
+    overflow: visible;
 }
-.modern-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+.workout-tile.active { border: 2px solid #00b894; }
+
+.w-header { display: flex; align-items: center; gap: 10px; width: 100%; }
+.w-status-icon { 
+    width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.1); 
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
 }
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.header-left { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; color: #2c3e50; }
-.subtitle { font-size: 12px; color: #999; font-weight: normal; }
+.workout-tile.active .w-status-icon { background: #00b894; color: white; }
 
-/* Icon Wrappers */
-.icon-wrapper {
-    width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;
-}
-.bg-orange { background: linear-gradient(135deg, #ff9f43, #ff6b6b); }
-.bg-blue { background: linear-gradient(135deg, #54a0ff, #2e86de); }
-.bg-green { background: linear-gradient(135deg, #2ed573, #7bed9f); }
-.bg-purple { background: linear-gradient(135deg, #a55eea, #8854d0); }
-.bg-gray { background: linear-gradient(135deg, #a4b0be, #747d8c); }
+.w-text-content { flex: 1; display: flex; flex-direction: column; }
+.w-label { font-size: 11px; color: rgba(255,255,255,0.6); font-weight: 600; }
+.w-state { font-size: 14px; font-weight: 700; color: white; }
 
-/* Workout Card */
-.workout-card { margin-bottom: 25px; border-left: 5px solid #ff9f43; }
-.workout-header { display: flex; justify-content: space-between; align-items: center; }
-.workout-controls { margin-top: 20px; padding-top: 10px; border-top: 1px dashed #eee; }
-.intensity-presets { margin-bottom: 15px; display: flex; justify-content: center; }
-.slider-container { display: flex; align-items: center; padding: 0 10px; }
+.w-controls { margin-top: 15px; animation: fadeIn 0.3s; }
+.w-cal-display { display: flex; align-items: baseline; gap: 4px; margin-bottom: 5px; }
+.cal-val { font-size: 24px; font-weight: 800; color: #00b894; line-height: 1; }
+.cal-unit { font-size: 12px; color: rgba(255,255,255,0.6); }
 
-/* Calorie Card */
-.calorie-display { text-align: center; padding: 10px 0; }
-.number-display { font-size: 28px; font-weight: 700; color: #2c3e50; margin-bottom: 15px; }
-.number-display .divider { color: #ccc; font-weight: 300; margin: 0 5px; }
-.number-display .target { color: #95a5a6; font-size: 20px; }
-.number-display .unit { font-size: 14px; color: #95a5a6; font-weight: normal; margin-left: 5px; }
-.tips-container { margin-top: 15px; min-height: 24px; display: flex; justify-content: center; }
-.tips { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; }
-.tips.warning { color: #e74c3c; }
-.tips.success { color: #27ae60; }
-.custom-divider { margin: 25px 0 15px; }
+.w-slider-wrap { padding: 0 5px; }
+.workout-tile :deep(.el-slider__runway) { background-color: rgba(255,255,255,0.2); height: 4px; margin: 10px 0; }
+.workout-tile :deep(.el-slider__bar) { background-color: #00b894; height: 4px; }
+.workout-tile :deep(.el-slider__button) { width: 16px; height: 16px; border: 2px solid #00b894; background: white; }
 
-/* Macros */
-.macros-container { text-align: center; padding: 10px 0; }
-.macro-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.macro-val { font-size: 16px; font-weight: bold; color: #2c3e50; }
-.macro-target { font-size: 12px; color: #95a5a6; }
-.macro-label { font-size: 13px; color: #7f8c8d; }
-
-/* History List */
-.history-list { display: flex; flex-direction: column; gap: 12px; }
-.history-item { 
-    display: flex; justify-content: space-between; align-items: center; 
-    padding: 12px 15px; background: #f8f9fa; border-radius: 10px;
-    transition: background 0.2s;
-}
-.history-item:hover { background: #f1f2f6; }
-.date { color: #2c3e50; font-weight: 500; }
-.balance-tag { padding: 4px 12px; border-radius: 20px; font-size: 13px; }
-.balance-tag.is-success { background: rgba(46, 213, 115, 0.15); color: #27ae60; }
-.balance-tag.is-warning { background: rgba(255, 71, 87, 0.15); color: #e74c3c; }
-.mt-20 { margin-top: 20px; }
-.mb-20 { margin-bottom: 20px; }
-
-/* Weight Dialog */
-.weight-input-container { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 20px 0; }
-.weight-input-container .unit { font-size: 18px; font-weight: bold; color: #2c3e50; }
-
-/* Animations */
-.animate-fade-in { animation: fadeIn 0.6s ease-out; }
-.animate-slide-up { animation: slideUp 0.6s ease-out both; }
-.delay-1 { animation-delay: 0.1s; }
-.delay-2 { animation-delay: 0.2s; }
-.delay-3 { animation-delay: 0.3s; }
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-@media (max-width: 768px) {
-    .header-text h2 { font-size: 20px; }
+.w-placeholder { 
+    margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.3); 
+    text-align: center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;
 }
 
-@media (max-width: 1199px) {
-    .calorie-card {
-        margin-bottom: 20px;
-    }
+/* 3. Macro Styles */
+.icon-bubble { 
+    width: 36px; height: 36px; border-radius: 12px; 
+    display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 5px;
+    backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.5);
 }
+.blue { background: rgba(64, 158, 255, 0.1); color: #409eff; }
+.green { background: rgba(0, 184, 148, 0.1); color: #00b894; }
+.orange { background: rgba(253, 203, 110, 0.1); color: #fdcb6e; }
+
+.macro-info { display: flex; flex-direction: column; gap: 2px; }
+.m-label { font-size: 11px; color: #b2bec3; font-weight: 700; }
+.m-val { font-size: 18px; font-weight: 800; color: #2d3436; }
+.m-val small { font-size: 10px; }
+
+/* 4. Weight Styles */
+.tile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.tile-header h3 { margin: 0; font-size: 16px; color: #2d3436; font-weight: 800; }
+.trend-badge { 
+    background: rgba(0, 184, 148, 0.1); color: #00b894; 
+    padding: 4px 8px; border-radius: 8px; font-weight: 800; font-size: 11px; 
+}
+.chart-wrapper { height: 120px; width: 100%; opacity: 0.9; }
+
+/* 5. History Styles */
+.history-tile h3 { margin: 0 0 15px 0; font-size: 16px; color: #2d3436; font-weight: 800; }
+.history-scroll { overflow-y: auto; height: 100%; display: flex; flex-direction: column; gap: 10px; }
+.h-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.5); }
+.h-date { display: flex; flex-direction: column; align-items: center; background: white; padding: 4px 8px; border-radius: 8px; }
+.d-day { font-weight: 800; font-size: 14px; color: #2d3436; }
+.d-month { font-size: 9px; color: #b2bec3; font-weight: 700; }
+.h-val { font-weight: 800; font-size: 15px; }
+.h-val.good { color: #00b894; }
+.h-val.bad { color: #ff7675; }
+
+/* Animation */
+.animate-pop { animation: popIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+.delay-5 { animation-delay: 0.25s; }
+@keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+.w-input-area { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px 0; }
+.w-input-area .unit { font-size: 18px; font-weight: 800; color: #2d3436; }
 </style>

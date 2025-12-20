@@ -149,6 +149,10 @@
              <el-button type="primary" size="large" round class="save-btn" @click="saveProfile" :icon="Check">
                 保存修改
              </el-button>
+             
+             <el-button type="danger" plain size="large" round class="logout-btn" @click="handleLogout" :icon="Back">
+                退出登录
+             </el-button>
         </div>
     </div>
   </div>
@@ -156,12 +160,14 @@
 
 <script setup>
 import { reactive, onMounted, ref, nextTick, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { ElMessage } from 'element-plus'
-import { UserFilled, Postcard, Aim, Check, Edit } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { UserFilled, Postcard, Aim, Check, Edit, Back } from '@element-plus/icons-vue'
 import { compressImage } from '../utils/compress'
 
 const userStore = useUserStore()
+const router = useRouter()
 const form = reactive({ ...userStore.profile })
 
 // Motto State
@@ -190,6 +196,24 @@ onMounted(() => {
 function saveProfile() {
   userStore.updateProfile(form)
   ElMessage.success('个人资料已更新')
+}
+
+// Logout Logic
+function handleLogout() {
+  ElMessageBox.confirm(
+    '确定要退出登录吗？',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+      round: true
+    }
+  ).then(() => {
+    userStore.logout()
+    ElMessage.success('已成功退出')
+    router.push('/login')
+  }).catch(() => {})
 }
 
 // Avatar Logic
@@ -307,13 +331,21 @@ function saveMotto() {
 .action-area {
     margin-top: 10px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
 }
-.save-btn {
+.save-btn, .logout-btn {
     width: 100%;
     max-width: 300px;
     font-weight: bold;
+}
+.save-btn {
     box-shadow: 0 4px 15px rgba(64, 158, 255, 0.3);
+}
+.logout-btn {
+    margin-left: 0 !important; /* Reset Element Plus margin */
+    border-style: dashed;
 }
 
 /* Animations */

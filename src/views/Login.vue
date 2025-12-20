@@ -26,6 +26,7 @@
               v-model="form.username" 
               placeholder="用户名" 
               :prefix-icon="User"
+              @keyup.enter="focusPassword"
             />
           </el-form-item>
           <el-form-item>
@@ -35,6 +36,8 @@
               placeholder="密码" 
               show-password 
               :prefix-icon="Lock"
+              ref="passwordInput"
+              @keyup.enter="handleLogin"
             />
           </el-form-item>
           <el-form-item>
@@ -61,11 +64,16 @@ import { User, Lock, Trophy } from '@element-plus/icons-vue'
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
+const passwordInput = ref(null)
 
 const form = reactive({
   username: '',
   password: ''
 })
+
+const focusPassword = () => {
+  passwordInput.value?.focus()
+}
 
 const handleLogin = async () => {
   if (!form.username || !form.password) {

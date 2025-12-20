@@ -56,7 +56,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.admin-container { padding: 20px; max-width: 1000px; margin: 0 auto; }
+.admin-container { padding: 20px; padding-bottom: 100px; margin: 0 auto; }
 .stats-row { margin-bottom: 20px; }
 .stat-item { text-align: center; }
 .label { color: #909399; margin-bottom: 5px; }

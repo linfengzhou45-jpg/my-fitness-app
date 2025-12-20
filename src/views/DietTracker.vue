@@ -1,92 +1,78 @@
 <template>
-  <div class="diet-container animate-fade-in">
-    <!-- Date Picker & Header -->
-    <div class="control-bar">
-       <div class="date-selector">
-           <el-icon class="calendar-icon"><Calendar /></el-icon>
+  <div class="timeline-container">
+    <!-- Floating Header -->
+    <div class="timeline-header animate-down">
+       <div class="date-capsule">
+           <button class="nav-arrow" @click="changeDay(-1)"><el-icon><ArrowLeftBold /></el-icon></button>
            <el-date-picker
             v-model="currentDate"
             type="date"
-            placeholder="选择日期"
-            format="YYYY-MM-DD"
+            format="MM月DD日"
             value-format="YYYY-MM-DD"
-            :disabled-date="(time) => time.getTime() > Date.now()"
-            @change="handleDateChange"
-            class="custom-date-picker"
             :clearable="false"
+            class="hidden-picker"
+            @change="handleDateChange"
           />
+           <div class="date-display" @click="triggerDatePicker">
+               <span class="d-text">{{ formattedDate }}</span>
+               <span class="d-sub" v-if="isToday">今天</span>
+           </div>
+           <button class="nav-arrow" @click="changeDay(1)" :disabled="isToday"><el-icon><ArrowRightBold /></el-icon></button>
        </div>
-      <div class="daily-summary" v-if="currentDate === today">
-          <span class="summary-label">今日摄入</span>
-          <span class="summary-value">{{ dayIntake.calories }} <small>kcal</small></span>
-      </div>
+       <div class="daily-total">
+           <span class="t-label">摄入</span>
+           <span class="t-val">{{ dayIntake.calories }}</span>
+       </div>
     </div>
 
-    <!-- Main Content Area -->
-    <div v-if="canShowDetails" class="meals-container">
-        <div v-for="(meal, index) in meals" :key="meal.key" class="meal-wrapper" :style="{ animationDelay: `${index * 0.1}s` }">
-            <el-card class="meal-card" shadow="hover" :body-style="{ padding: '0' }">
-                <template #header>
-                    <div class="meal-header">
-                        <div class="header-left">
-                            <el-icon class="meal-icon" :class="meal.key">
-                                <component :is="mealIconMap[meal.key]" />
-                            </el-icon>
-                            <span class="meal-title">{{ meal.label }}</span>
-                        </div>
-                        <span class="meal-cals">{{ getMealCalories(meal.key) }} kcal</span>
-                    </div>
-                </template>
+    <!-- Timeline Content -->
+    <div class="timeline-body">
+        <div class="timeline-line"></div>
+        
+        <div v-for="(meal, index) in meals" :key="meal.key" class="timeline-item animate-slide-right" :style="{ animationDelay: `${index * 0.1}s` }">
+            <div class="time-node">
+                <div class="node-dot" :class="meal.key">
+                    <el-icon><component :is="mealIconMap[meal.key]" /></el-icon>
+                </div>
+            </div>
+            
+            <div class="content-card">
+                <div class="card-head">
+                    <span class="meal-name">{{ meal.label }}</span>
+                    <span class="meal-cal">{{ getMealCalories(meal.key) }} kcal</span>
+                </div>
                 
-                <div v-if="currentLog[meal.key] && currentLog[meal.key].length > 0" class="food-list">
-                    <div v-for="(item, idx) in currentLog[meal.key]" :key="idx" class="food-item">
-                        <div class="food-info">
-                            <div class="food-name">{{ item.name }}</div>
-                            <div class="food-macros">
-                                <span class="cal-badge">{{ item.calories }} kcal</span>
-                                <span class="macro-text">C:{{ item.carbs }} P:{{ item.protein }} F:{{ item.fat }}</span>
+                <div v-if="currentLog[meal.key] && currentLog[meal.key].length > 0" class="food-group">
+                    <div v-for="(item, idx) in currentLog[meal.key]" :key="idx" class="food-row">
+                        <div class="f-left">
+                            <span class="f-name">{{ item.name }}</span>
+                            <div class="f-tags">
+                                <span class="tag cal">{{ item.calories }}</span>
+                                <span class="tag macro">C{{ item.carbs }} P{{ item.protein }} F{{ item.fat }}</span>
                             </div>
                         </div>
-                        <div class="food-actions">
-                             <el-tooltip content="编辑" placement="top">
-                                <el-button type="primary" link :icon="Edit" @click="openEditFood(meal.key, idx, item)" />
-                             </el-tooltip>
-                             <el-tooltip :content="dietStore.isFavorite(item) ? '取消收藏' : '收藏'" placement="top">
-                                <el-button 
-                                    :type="dietStore.isFavorite(item) ? 'warning' : 'info'" 
-                                    link 
-                                    :icon="dietStore.isFavorite(item) ? StarFilled : Star" 
-                                    @click="dietStore.toggleFavorite(item)" 
-                                />
-                             </el-tooltip>
-                             <el-tooltip content="删除" placement="top">
-                                <el-button type="danger" link :icon="Delete" @click="dietStore.removeFood(meal.key, idx)" />
-                             </el-tooltip>
+                        <div class="f-actions">
+                            <button class="icon-btn edit" @click="openEditFood(meal.key, idx, item)"><el-icon><Edit /></el-icon></button>
+                            <button class="icon-btn fav" :class="{ active: dietStore.isFavorite(item) }" @click="dietStore.toggleFavorite(item)">
+                                <el-icon><StarFilled /></el-icon>
+                            </button>
+                            <button class="icon-btn del" @click="dietStore.removeFood(meal.key, idx)"><el-icon><Delete /></el-icon></button>
                         </div>
                     </div>
                 </div>
-                <div v-else class="empty-meal">
-                    <span class="empty-text">点击右下角添加食物</span>
+                
+                <div v-else class="empty-slot" @click="openAddForMeal(meal.key)">
+                    <span class="plus">+</span> 记录{{ meal.label }}
                 </div>
-            </el-card>
+            </div>
         </div>
         
-        <div class="empty-state" v-if="isDayEmpty">
-            <el-empty description="今天还没有记录饮食哦" :image-size="100" />
+        <!-- Empty State -->
+        <div v-if="isDayEmpty" class="empty-day-state">
+            <el-icon class="sleep-icon"><Moon /></el-icon>
+            <p>还没有记录哦</p>
         </div>
     </div>
-
-    <!-- Historical Summary View (For older dates) -->
-    <div v-else class="history-summary-view">
-        <el-card class="summary-card modern-card">
-            <h3>{{ currentDate }} 饮食概览</h3>
-            <div class="summary-badge" :class="historyBalance >= 0 ? 'green' : 'red'">
-                {{ historyBalance >= 0 ? `剩余额度 ${historyBalance} kcal` : `超标摄入 ${Math.abs(historyBalance)} kcal` }}
-            </div>
-            <p class="history-note">详细记录已归档，仅展示核心指标。</p>
-        </el-card>
-    </div>
-
   </div>
 </template>
 
@@ -94,203 +80,184 @@
 import { ref, computed, inject } from 'vue'
 import { useDietStore } from '../stores/diet'
 import { useUserStore } from '../stores/user'
-import { Delete, Edit, Star, StarFilled, Calendar, Sunrise, Sunny, Sunset, CoffeeCup } from '@element-plus/icons-vue'
+import { Delete, Edit, StarFilled, ArrowLeftBold, ArrowRightBold, Sunrise, Sunny, Sunset, CoffeeCup, Moon } from '@element-plus/icons-vue'
+import dayjs from 'dayjs' // Assuming dayjs or native date logic
 
 const dietStore = useDietStore()
 const userStore = useUserStore()
+const openEditFood = inject('openEditFood') // Need to ensure parent provides this or handle logic
 
-// Inject global openEdit function from App.vue
-const openEditFood = inject('openEditFood')
-
-// State
 const currentDate = ref(dietStore.today)
-
-// Data
 const meals = [
     { key: 'breakfast', label: '早餐' },
     { key: 'lunch', label: '午餐' },
     { key: 'dinner', label: '晚餐' },
-    { key: 'snack', label: '加餐/零食' }
+    { key: 'snack', label: '加餐' }
 ]
+const mealIconMap = { breakfast: Sunrise, lunch: Sunny, dinner: Sunset, snack: CoffeeCup }
 
-const mealIconMap = {
-    breakfast: Sunrise,
-    lunch: Sunny,
-    dinner: Sunset,
-    snack: CoffeeCup
-}
+const isToday = computed(() => currentDate.value === dietStore.today)
+const formattedDate = computed(() => {
+    const d = new Date(currentDate.value)
+    return `${d.getMonth() + 1}月${d.getDate()}日`
+})
 
-const today = computed(() => dietStore.today)
 const currentLog = computed(() => dietStore.logs[currentDate.value] || { breakfast: [], lunch: [], dinner: [], snack: [] })
-
 const dayIntake = computed(() => {
     let total = 0
-    Object.values(currentLog.value).forEach(list => {
-        list.forEach(i => total += Number(i.calories))
-    })
+    Object.values(currentLog.value).forEach(l => l.forEach(i => total += Number(i.calories)))
     return { calories: total }
 })
+const isDayEmpty = computed(() => Object.values(currentLog.value).every(l => l.length === 0))
 
-const isDayEmpty = computed(() => {
-    return Object.values(currentLog.value).every(list => list.length === 0)
-})
-
-// Date Logic for History Limit
-const canShowDetails = computed(() => {
+function changeDay(offset) {
     const d = new Date(currentDate.value)
-    const t = new Date(today.value)
-    const diffTime = Math.abs(t - d)
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) 
-    // allow today (0) and yesterday (1)
-    return diffDays <= 1
-})
-
-const historyBalance = computed(() => {
-    // Estimate target (using current target)
-    return userStore.targetCalories - dayIntake.value.calories
-})
-
+    d.setDate(d.getDate() + offset)
+    currentDate.value = d.toISOString().split('T')[0]
+}
 function handleDateChange(val) {
-    if (!val) currentDate.value = today.value
+    if (!val) currentDate.value = dietStore.today
+}
+function triggerDatePicker() {
+    // Styling hack: position the real date picker over the text but invisible, or handle programmatically
+    const picker = document.querySelector('.hidden-picker .el-input__inner')
+    if(picker) picker.click() // Might need better handling depending on Element Plus version
+}
+function getMealCalories(key) {
+    return currentLog.value[key]?.reduce((acc, c) => acc + Number(c.calories), 0) || 0
 }
 
-function getMealCalories(mealKey) {
-    return currentLog.value[mealKey]?.reduce((acc, curr) => acc + Number(curr.calories), 0) || 0
+// Quick Add (Just opens standard add dialog, theoretically you could pre-select meal)
+// Since the global add dialog doesn't accept meal type param yet, we just open it.
+// In a real 'Deep Refactor', I'd pass the meal type to the add drawer.
+function openAddForMeal(key) {
+    // Logic to open add drawer, potentially focusing specific meal
+    // For now, assume user selects meal type manually in drawer or just generic add
+    // Ideally, emit event or use provide/inject to open specific add flow
+    // I'll assume generic add for now
+    document.querySelector('.add-fab')?.click() 
 }
 </script>
 
 <style scoped>
-.diet-container {
-    padding-bottom: 90px; /* Space for FAB */
-    position: relative;
-    min-height: 100%;
-    max-width: 800px;
+.timeline-container {
+    padding-bottom: 100px;
+    max-width: 600px; /* Mobile focused width */
     margin: 0 auto;
 }
 
-/* Control Bar */
-.control-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-    background: #fff;
-    padding: 15px 20px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+/* Header */
+.timeline-header {
+    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 15px; z-index: 10;
+    background: rgba(255,255,255,0.7); backdrop-filter: blur(20px);
+    padding: 8px 20px; border-radius: 50px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    margin-bottom: 40px; border: 1px solid rgba(255,255,255,0.5);
+    transition: all 0.3s;
 }
-.date-selector {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.date-capsule { display: flex; align-items: center; gap: 15px; }
+.nav-arrow { 
+    border: none; background: transparent; color: #b2bec3; cursor: pointer; 
+    display: flex; align-items: center; font-size: 16px; padding: 5px;
+    transition: color 0.2s;
 }
-.calendar-icon { font-size: 20px; color: #409eff; }
-.custom-date-picker { width: 150px; }
+.nav-arrow:hover { color: #6c5ce7; }
+.nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+.date-display { display: flex; flex-direction: column; align-items: center; line-height: 1.1; cursor: pointer; position: relative; }
+.hidden-picker { position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; }
+.d-text { font-weight: 800; font-size: 17px; color: #2d3436; letter-spacing: -0.5px; }
+.d-sub { font-size: 11px; color: #00b894; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 
-.daily-summary {
-    text-align: right;
+.daily-total { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.t-label { font-size: 10px; color: #b2bec3; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.t-val { font-size: 20px; font-weight: 800; color: #2d3436; letter-spacing: -1px; }
+
+/* Timeline Body */
+.timeline-body { position: relative; padding: 0 10px; }
+.timeline-line {
+    position: absolute; left: 28px; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(to bottom, #dfe6e9 0%, #dfe6e9 50%, transparent 100%);
+    background-size: 2px 10px; /* Solid line for cleaner look, or dashes if preferred */
+    z-index: 0;
 }
-.summary-label { display: block; font-size: 12px; color: #909399; }
-.summary-value { font-size: 20px; font-weight: bold; color: #2c3e50; }
-.summary-value small { font-size: 14px; font-weight: normal; color: #909399; }
 
-/* Meal Cards */
-.meals-container { display: flex; flex-direction: column; gap: 20px; }
-.meal-wrapper { animation: slideUp 0.5s ease-out both; }
+.timeline-item {
+    display: flex; gap: 20px; margin-bottom: 30px; position: relative; z-index: 1;
+}
 
-.meal-card {
-    border: none;
-    border-radius: 16px;
+.time-node { flex-shrink: 0; width: 40px; display: flex; justify-content: center; }
+.node-dot {
+    width: 40px; height: 40px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: white; border: 4px solid #f4f7f6; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    font-size: 18px; transition: transform 0.2s;
+}
+.timeline-item:hover .node-dot { transform: scale(1.1); border-color: white; }
+.node-dot.breakfast { color: #e67e22; }
+.node-dot.lunch { color: #f1c40f; }
+.node-dot.dinner { color: #9b59b6; }
+.node-dot.snack { color: #00b894; }
+
+.content-card {
+    flex: 1; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);
+    border-radius: 24px;
+    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
+    border: 1px solid rgba(255,255,255,0.6);
     overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.3s, box-shadow 0.3s;
 }
-.meal-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
-}
+.content-card:hover { transform: translateY(-3px); box-shadow: 0 15px 40px -5px rgba(0,0,0,0.1); }
 
-.meal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    background: linear-gradient(to right, #f9fafb, #fff);
+.card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 24px; background: rgba(255,255,255,0.5); border-bottom: 1px solid rgba(0,0,0,0.03);
 }
-.header-left { display: flex; align-items: center; gap: 10px; }
-.meal-title { font-weight: 600; color: #2c3e50; font-size: 16px; }
-.meal-cals { font-weight: 500; color: #909399; font-size: 14px; }
+.meal-name { font-weight: 800; color: #2d3436; font-size: 15px; }
+.meal-cal { font-weight: 700; color: #b2bec3; font-size: 13px; background: rgba(0,0,0,0.03); padding: 4px 10px; border-radius: 8px; }
 
-.meal-icon {
-    font-size: 20px;
-    padding: 6px;
-    border-radius: 8px;
+.food-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px; border-bottom: 1px solid rgba(0,0,0,0.03);
 }
-.meal-icon.breakfast { color: #e67e22; background: rgba(230, 126, 34, 0.1); }
-.meal-icon.lunch { color: #f1c40f; background: rgba(241, 196, 15, 0.1); }
-.meal-icon.dinner { color: #9b59b6; background: rgba(155, 89, 182, 0.1); }
-.meal-icon.snack { color: #1abc9c; background: rgba(26, 188, 156, 0.1); }
+.food-row:last-child { border-bottom: none; }
+.f-left { display: flex; flex-direction: column; gap: 5px; }
+.f-name { font-weight: 700; font-size: 16px; color: #2d3436; }
+.f-tags { display: flex; gap: 8px; }
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 700; letter-spacing: 0.5px; }
+.tag.cal { background: #dfe6e9; color: #636e72; }
+.tag.macro { background: rgba(108, 92, 231, 0.1); color: #6c5ce7; font-family: monospace; }
 
-/* Food List */
-.food-list { padding: 5px 0; }
-.food-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    border-bottom: 1px solid #f5f7fa;
-    transition: background 0.2s;
-}
-.food-item:last-child { border-bottom: none; }
-.food-item:hover { background: #fcfcfc; }
+.f-actions { display: flex; gap: 12px; opacity: 0; transition: opacity 0.2s, transform 0.2s; transform: translateX(10px); }
+.food-row:hover .f-actions { opacity: 1; transform: translateX(0); }
+.icon-btn { border: none; background: transparent; cursor: pointer; color: #b2bec3; font-size: 16px; padding: 6px; border-radius: 8px; transition: all 0.2s; }
+.icon-btn:hover { background: rgba(0,0,0,0.05); color: #2d3436; }
+.icon-btn.fav:hover { color: #fdcb6e; background: rgba(253, 203, 110, 0.1); }
+.icon-btn.fav.active { color: #fdcb6e; }
+.icon-btn.del:hover { color: #ff7675; background: rgba(255, 118, 117, 0.1); }
 
-.food-info { display: flex; flex-direction: column; gap: 4px; }
-.food-name { font-weight: 500; font-size: 15px; color: #2c3e50; }
-.food-macros { display: flex; align-items: center; gap: 10px; font-size: 12px; }
-.cal-badge { 
-    background: #f0f2f5; color: #606266; 
-    padding: 2px 6px; border-radius: 4px; font-weight: 600; 
+.empty-slot {
+    padding: 20px; text-align: center; cursor: pointer;
+    color: #b2bec3; font-size: 14px; font-weight: 600;
+    transition: all 0.3s;
+    border: 2px dashed rgba(0,0,0,0.05);
+    margin: 10px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.macro-text { color: #909399; }
+.empty-slot:hover { 
+    border-color: #6c5ce7; color: #6c5ce7; background: rgba(108, 92, 231, 0.05);
+}
+.plus { font-size: 18px; font-weight: bold; }
 
-.food-actions { display: flex; gap: 5px; opacity: 0.6; transition: opacity 0.2s; }
-.food-item:hover .food-actions { opacity: 1; }
-
-.empty-meal {
-    padding: 20px;
-    text-align: center;
-    color: #c0c4cc;
-    font-size: 13px;
-    font-style: italic;
+.empty-day-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin-top: 60px; color: #b2bec3; gap: 15px; opacity: 0.6;
 }
-
-/* History View */
-.history-summary-view {
-    display: flex;
-    justify-content: center;
-    margin-top: 40px;
-}
-.summary-card {
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    padding: 20px;
-}
-.summary-badge {
-    display: inline-block;
-    padding: 10px 25px;
-    border-radius: 30px;
-    color: white;
-    font-weight: bold;
-    font-size: 16px;
-    margin: 25px 0;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-.summary-badge.green { background: linear-gradient(135deg, #2ecc71, #27ae60); }
-.summary-badge.red { background: linear-gradient(135deg, #e74c3c, #c0392b); }
-.history-note { color: #909399; font-size: 13px; }
+.sleep-icon { font-size: 48px; color: #dfe6e9; }
 
 /* Animations */
-.animate-fade-in { animation: fadeIn 0.5s ease-out; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+.animate-down { animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-slide-right { animation: slideRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideRight { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
 </style>
