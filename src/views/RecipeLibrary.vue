@@ -26,7 +26,7 @@
             :style="{ animationDelay: `${index * 0.05}s` }"
             @click="openRecipeDetail(recipe)"
           >
-              <div class="recipe-card" :class="getBorderClass(index)">
+              <div class="recipe-card">
                   <div class="card-content">
                       <h3 class="recipe-title">{{ recipe.title }}</h3>
                       <div class="tags">
@@ -44,6 +44,7 @@
                       </el-image>
                   </div>
                   <div v-if="isAdmin" class="card-admin-overlay" @click.stop>
+                      <el-button type="primary" :icon="Edit" circle size="small" class="mr-1" @click.stop="openEditSystemRecipe(recipe)" />
                       <el-button type="danger" :icon="Delete" circle size="small" @click.stop="deleteSystemRecipe(recipe.id)" />
                   </div>
               </div>
@@ -117,7 +118,7 @@
     </el-dialog>
 
     <!-- Admin: Add System Recipe Dialog -->
-    <el-dialog v-model="systemDialogVisible" title="新增系统食谱" width="90%" class="responsive-dialog" destroy-on-close>
+    <el-dialog v-model="systemDialogVisible" :title="isEditingSystem ? '编辑系统食谱' : '新增系统食谱'" width="90%" class="responsive-dialog" destroy-on-close>
         <el-form :model="systemForm" label-width="80px">
             <el-form-item label="标题">
                 <el-input v-model="systemForm.title" />
@@ -160,7 +161,7 @@
         </el-form>
         <template #footer>
             <el-button @click="systemDialogVisible = false">取消</el-button>
-            <el-button type="primary" @click="handleSaveSystemRecipe">确认添加</el-button>
+            <el-button type="primary" @click="handleSaveSystemRecipe">{{ isEditingSystem ? '保存更新' : '确认添加' }}</el-button>
         </template>
     </el-dialog>
 
@@ -238,6 +239,7 @@ import { useUserStore } from '../stores/user'
 import { ElMessage } from 'element-plus'
 import { Plus, Search, ArrowRight, StarFilled, ShoppingBag, Timer, Food, Edit, Delete } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { compressImage } from '../utils/compress'
 
 const activeTab = ref('system')
 const dietStore = useDietStore()
@@ -250,7 +252,8 @@ const inputWeight = ref(100) // Default 100g
 // Admin & System Recipe State
 const isAdmin = computed(() => userStore.role === 'admin')
 const systemDialogVisible = ref(false)
-const systemForm = reactive({ title: '', calories: 0, carbs: 0, protein: 0, fat: 0, baseWeight: 100, image: '', description: '', ingredients: '', instructions: '' })
+const isEditingSystem = ref(false)
+const systemForm = reactive({ id: null, title: '', calories: 0, carbs: 0, protein: 0, fat: 0, baseWeight: 100, image: '', description: '', ingredients: '', instructions: '' })
 
 // Edit Favorite State
 const editFavDialogVisible = ref(false)
@@ -269,11 +272,6 @@ const filteredSystemRecipes = computed(() => {
         (r.ingredients && r.ingredients.some(i => i.toLowerCase().includes(q)))
     )
 })
-
-function getBorderClass(index) {
-    const colors = ['border-blue', 'border-green', 'border-orange', 'border-purple']
-    return colors[index % colors.length]
-}
 
 // Logic for Adding Food
 function openRecipeDetail(recipe) {
@@ -328,15 +326,49 @@ function handleSystemImageSuccess(res) {
 }
 function beforeImageUpload(file) {
     const isImg = file.type === 'image/jpeg' || file.type === 'image/png';
-    const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isImg) ElMessage.error('只能上传 JPG/PNG 文件');
-    if (!isLt2M) ElMessage.error('图片大小不能超过 2MB');
-    return isImg && isLt2M;
+    
+    if (!isImg) {
+        ElMessage.error('只能上传 JPG/PNG 文件');
+        return false;
+    }
+    
+    return compressImage(file, 600, 0.7).then(compressedFile => {
+        if (compressedFile.size / 1024 / 1024 > 5) {
+             ElMessage.error('图片即使压缩后仍过大，请更换图片')
+             return false
+        }
+        return compressedFile
+    }).catch(err => {
+        console.error(err)
+        ElMessage.error('图片处理失败')
+        return false
+    })
 }
 
 // Admin Logic
 function openAddSystemRecipe() {
-    Object.assign(systemForm, { title: '', calories: 0, carbs: 0, protein: 0, fat: 0, baseWeight: 100, image: '', description: '', ingredients: '', instructions: '' })
+    isEditingSystem.value = false
+    Object.assign(systemForm, { id: null, title: '', calories: 0, carbs: 0, protein: 0, fat: 0, baseWeight: 100, image: '', description: '', ingredients: '', instructions: '' })
+    systemDialogVisible.value = true
+}
+
+function openEditSystemRecipe(recipe) {
+    isEditingSystem.value = true
+    // Populate form
+    Object.assign(systemForm, {
+        id: recipe.id,
+        title: recipe.title,
+        calories: recipe.calories,
+        carbs: recipe.carbs,
+        protein: recipe.protein,
+        fat: recipe.fat,
+        baseWeight: recipe.baseWeight || 100,
+        image: recipe.image,
+        description: recipe.description,
+        // Ensure ingredients is string for textarea
+        ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients.join('\n') : recipe.ingredients,
+        instructions: recipe.instructions
+    })
     systemDialogVisible.value = true
 }
 
@@ -350,14 +382,24 @@ async function handleSaveSystemRecipe() {
     }
     
     try {
-        await axios.post('/api/recipes', payload, {
-            headers: { Authorization: `Bearer ${userStore.token}` }
-        })
-        ElMessage.success('添加成功')
+        if (isEditingSystem.value && systemForm.id) {
+            // Update existing
+            await axios.put(`/api/recipes/${systemForm.id}`, payload, {
+                headers: { Authorization: `Bearer ${userStore.token}` }
+            })
+            ElMessage.success('更新成功')
+        } else {
+            // Create new
+            await axios.post('/api/recipes', payload, {
+                headers: { Authorization: `Bearer ${userStore.token}` }
+            })
+            ElMessage.success('添加成功')
+        }
+        
         systemDialogVisible.value = false
         dietStore.fetchRecipes()
     } catch (e) {
-        ElMessage.error('添加失败')
+        ElMessage.error(isEditingSystem.value ? '更新失败' : '添加失败')
     }
 }
 
@@ -438,17 +480,11 @@ function confirmAddFood() {
     height: 120px; /* Fixed height for consistency */
     display: flex;
     position: relative;
-    border-left: 5px solid transparent; 
 }
 .recipe-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
-
-.border-blue { border-left-color: #54a0ff; }
-.border-green { border-left-color: #2ed573; }
-.border-orange { border-left-color: #ff9f43; }
-.border-purple { border-left-color: #a55eea; }
 
 .card-content { 
     padding: 15px; 

@@ -15,7 +15,9 @@ const app = express();
 const port = 3000;
 
 app.use(cors());
-app.use(express.json());
+// Increase limit for Base64 images
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- Setup Paths ---
 const __filename = fileURLToPath(import.meta.url);
@@ -25,22 +27,17 @@ const RECIPES_FILE = path.join(__dirname, 'db', 'recipes.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key_123';
 
-// Ensure uploads dir exists
+// Ensure uploads dir exists (optional now, but good to keep)
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR);
 }
 
-// --- Multer Config ---
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, UPLOADS_DIR)
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-        cb(null, uniqueSuffix + path.extname(file.originalname))
-    }
-})
-const upload = multer({ storage: storage });
+// --- Multer Config (Memory Storage for Base64) ---
+const storage = multer.memoryStorage();
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // Limit 5MB
+});
 
 // --- Helpers ---
 const getUsers = () => {
@@ -198,9 +195,12 @@ app.put('/api/user/sync', authenticateToken, (req, res) => {
 // --- Upload Route ---
 app.post('/api/upload', authenticateToken, upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: '没有上传文件' });
-    // Return the URL to access the file
-    // Assuming server is running on localhost:3000, we map /uploads to static middleware
-    const fileUrl = `/uploads/${req.file.filename}`;
+    
+    // Convert buffer to Base64
+    const b64 = Buffer.from(req.file.buffer).toString('base64');
+    const mimeType = req.file.mimetype; // e.g., image/jpeg
+    const fileUrl = `data:${mimeType};base64,${b64}`;
+    
     res.json({ url: fileUrl });
 });
 
@@ -218,6 +218,23 @@ app.post('/api/recipes', authenticateToken, isAdmin, (req, res) => {
         res.json(newRecipe);
     } catch (error) {
         res.status(500).json({ error: '添加食谱失败' });
+    }
+});
+
+app.put('/api/recipes/:id', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const recipes = getRecipes();
+        const index = recipes.findIndex(r => r.id === id);
+        
+        if (index === -1) return res.status(404).json({ error: '食谱不存在' });
+        
+        // Merge updates
+        recipes[index] = { ...recipes[index], ...req.body, id }; // Ensure ID doesn't change
+        saveRecipes(recipes);
+        res.json(recipes[index]);
+    } catch (error) {
+        res.status(500).json({ error: '更新食谱失败' });
     }
 });
 

@@ -16,7 +16,8 @@ export const useUserStore = defineStore('user', () => {
     weight: 70, 
     activityLevel: 1.375, 
     goal: 'maintain', 
-    allergies: []
+    allergies: [],
+    customCalories: null
   }
 
   const profile = reactive({ ...defaultProfile })
@@ -43,11 +44,20 @@ export const useUserStore = defineStore('user', () => {
 
   // 目标热量
   const targetCalories = computed(() => {
-    let baseTarget = tdee.value
-    switch (profile.goal) {
-      case 'cut': baseTarget = Math.round(tdee.value * 0.85); break 
-      case 'bulk': baseTarget = Math.round(tdee.value * 1.15); break 
+    let baseTarget = 0
+    
+    // Check if user has a custom setting
+    if (profile.customCalories && profile.customCalories > 0) {
+        baseTarget = Number(profile.customCalories)
+    } else {
+        // Fallback to auto-calculation
+        switch (profile.goal) {
+          case 'cut': baseTarget = Math.round(tdee.value * 0.8); break // 20% Deficit
+          case 'bulk': baseTarget = Math.round(tdee.value * 1.1); break // 10% Surplus
+          default: baseTarget = tdee.value
+        }
     }
+
     if (workoutSettings.active) {
         baseTarget += workoutSettings.calories
     }

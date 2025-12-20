@@ -97,13 +97,32 @@
                     </el-select>
                 </el-form-item>
 
-                <el-form-item label="活动水平">
-                    <el-select v-model="form.activityLevel" placeholder="选择活动量" style="width: 100%">
-                        <el-option label="🛋️ 久坐 (办公室工作)" :value="1.2" />
-                        <el-option label="🚶 轻度活跃 (每周1-3练)" :value="1.375" />
-                        <el-option label="🏃 中度活跃 (每周3-5练)" :value="1.55" />
-                        <el-option label="🏋️ 非常活跃 (每周6-7练)" :value="1.725" />
-                        <el-option label="🏆 极度活跃 (体力工作+训练)" :value="1.9" />
+                <el-form-item label="每日热量目标 (kcal)">
+                    <div style="display: flex; flex-direction: column; width: 100%;">
+                        <el-input-number 
+                            v-model="form.customCalories" 
+                            :min="0" 
+                            :step="50"
+                            placeholder="留空则自动计算"
+                            style="width: 100%" 
+                        />
+                        <div class="sub-label" style="color: #909399; font-size: 12px; margin-top: 5px;">
+                            系统推荐值: <span style="color: #409eff; font-weight: bold;">{{ systemRecCalories }}</span> kcal 
+                            (输入 0 或留空以使用推荐值)
+                        </div>
+                    </div>
+                </el-form-item>
+
+                <el-form-item label="每周训练频率 (保守估算)">
+                    <el-select v-model="form.activityLevel" placeholder="选择每周运动天数" style="width: 100%">
+                        <el-option label="🛌 几乎不运动 (久坐办公)" :value="1.2" />
+                        <el-option label="🧘 每周练 1 次" :value="1.25" />
+                        <el-option label="🏃 每周练 2 次" :value="1.3" />
+                        <el-option label="🏃 每周练 3 次" :value="1.35" />
+                        <el-option label="🏋️ 每周练 4 次" :value="1.4" />
+                        <el-option label="🏋️ 每周练 5 次" :value="1.45" />
+                        <el-option label="🔥 每周练 6 次" :value="1.5" />
+                        <el-option label="🏆 天天练 (高强度)" :value="1.55" />
                     </el-select>
                 </el-form-item>
 
@@ -136,10 +155,11 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, ref, nextTick } from 'vue'
+import { reactive, onMounted, ref, nextTick, computed } from 'vue'
 import { useUserStore } from '../stores/user'
 import { ElMessage } from 'element-plus'
 import { UserFilled, Postcard, Aim, Check, Edit } from '@element-plus/icons-vue'
+import { compressImage } from '../utils/compress'
 
 const userStore = useUserStore()
 const form = reactive({ ...userStore.profile })
@@ -148,6 +168,20 @@ const form = reactive({ ...userStore.profile })
 const isEditingMotto = ref(false)
 const tempMotto = ref('')
 const mottoInput = ref(null)
+
+const systemRecCalories = computed(() => {
+    // Replicate store logic for display only (using form values for real-time feedback)
+    if (!form.weight || !form.height || !form.age) return 0
+    let base = 10 * form.weight + 6.25 * form.height - 5 * form.age
+    const bmr = form.gender === 'male' ? base + 5 : base - 161
+    const tdee = Math.round(bmr * (form.activityLevel || 1.2))
+    
+    switch (form.goal) {
+      case 'cut': return Math.round(tdee * 0.8);
+      case 'bulk': return Math.round(tdee * 1.1);
+      default: return tdee;
+    }
+})
 
 onMounted(() => {
     Object.assign(form, userStore.profile)
@@ -168,11 +202,21 @@ function beforeAvatarUpload(rawFile) {
   if (rawFile.type !== 'image/jpeg' && rawFile.type !== 'image/png') {
     ElMessage.error('Avatar picture must be JPG or PNG format!')
     return false
-  } else if (rawFile.size / 1024 / 1024 > 2) {
-    ElMessage.error('Avatar picture size can not exceed 2MB!')
-    return false
-  }
-  return true
+  } 
+  
+  // Always compress to ensure small base64 string
+  return compressImage(rawFile, 300, 0.7).then(compressedFile => {
+      // Check size again just in case, but it should be small now
+      if (compressedFile.size / 1024 / 1024 > 5) {
+           ElMessage.error('图片即使压缩后仍过大，请更换图片')
+           return false
+      }
+      return compressedFile
+  }).catch(err => {
+      console.error(err)
+      ElMessage.error('图片处理失败')
+      return false
+  })
 }
 
 // Motto Logic
