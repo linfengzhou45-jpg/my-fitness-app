@@ -18,31 +18,31 @@ const routes = [
     path: '/',
     name: 'Diet',
     component: () => import('../views/DietTracker.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, title: '饮食记录' }
   },
   {
     path: '/recipes',
     name: 'Recipes',
     component: () => import('../views/RecipeLibrary.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, title: '食谱库' }
   },
   {
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/UserProfile.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, title: '个人中心' }
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('../views/Dashboard.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, title: '仪表盘' }
   },
   {
     path: '/admin',
     name: 'Admin',
     component: () => import('../views/AdminDashboard.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true, requiresAdmin: true, title: '管理后台' }
   }
 ]
 

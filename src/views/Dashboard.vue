@@ -208,13 +208,18 @@ const weightChartOptions = computed(() => {
     const weights = weightHistory.value.map(i => i.weight)
     return {
         grid: { top: 10, bottom: 20, left: 0, right: 0 },
-        tooltip: { trigger: 'axis' },
+        tooltip: { 
+            trigger: 'axis',
+            backgroundColor: 'rgba(30, 41, 59, 0.9)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            textStyle: { color: 'white' }
+        },
         xAxis: { type: 'category', data: dates, show: false },
         yAxis: { type: 'value', min: 'dataMin', show: false },
         series: [{
             data: weights, type: 'line', smooth: true, showSymbol: false,
-            lineStyle: { width: 4, color: '#6c5ce7' },
-            areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{offset: 0, color: 'rgba(108,92,231,0.2)'}, {offset: 1, color: 'rgba(108,92,231,0)'}] } }
+            lineStyle: { width: 4, color: '#8e7dff' }, // Lighter purple
+            areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{offset: 0, color: 'rgba(142, 125, 255, 0.3)'}, {offset: 1, color: 'rgba(142, 125, 255, 0)'}] } }
         }]
     }
 })
@@ -239,20 +244,20 @@ function handleLogWeight() {
 }
 .greeting { 
     font-size: 24px; font-weight: 800; margin: 0; 
-    background: linear-gradient(135deg, #2d3436 0%, #636e72 100%); 
+    background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%); 
     -webkit-background-clip: text; color: transparent; 
     letter-spacing: -0.5px;
 }
-.subtitle { margin: 2px 0 0; color: #b2bec3; font-weight: 500; font-size: 13px; }
+.subtitle { margin: 2px 0 0; color: #94a3b8; font-weight: 500; font-size: 13px; }
 .action-btn {
-    padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.6); 
-    background: rgba(255,255,255,0.5); backdrop-filter: blur(10px);
-    font-weight: 700; color: #2d3436; cursor: pointer;
+    padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); 
+    background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+    font-weight: 700; color: white; cursor: pointer;
     display: flex; align-items: center; gap: 5px; transition: all 0.3s;
     font-size: 13px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
-.action-btn:hover { background: white; }
+.action-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
 
 /* BENTO GRID SYSTEM (MOBILE ONLY) */
 .bento-grid {
@@ -269,12 +274,13 @@ function handleLogWeight() {
 }
 
 .bento-card {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(30, 41, 59, 0.6);
     backdrop-filter: blur(20px);
     border-radius: 24px; padding: 15px;
     position: relative; overflow: hidden;
-    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 /* Grid Areas */
@@ -290,48 +296,49 @@ function handleLogWeight() {
 /* 1. Hero Styles */
 .hero-content { display: flex; justify-content: space-between; width: 100%; align-items: center; z-index: 1; }
 .hero-text { display: flex; flex-direction: column; }
-.hero-text .label { font-size: 12px; color: #b2bec3; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px; }
-.hero-text .big-val { font-size: 42px; font-weight: 800; line-height: 1; color: #2d3436; letter-spacing: -1px; }
-.hero-text .target { font-size: 14px; color: #636e72; font-family: monospace; font-weight: 600; }
+.hero-text .label { font-size: 12px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px; }
+.hero-text .big-val { font-size: 42px; font-weight: 800; line-height: 1; color: white; letter-spacing: -1px; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
+.hero-text .target { font-size: 14px; color: #94a3b8; font-family: monospace; font-weight: 600; }
 .ring-inner { display: flex; flex-direction: column; align-items: center; }
-.ring-pct { font-size: 20px; font-weight: 800; color: #2d3436; }
+.ring-pct { font-size: 20px; font-weight: 800; color: white; }
 .mobile-hero-status {
     position: absolute; bottom: 10px; right: 20px;
-    font-size: 12px; font-weight: 700; color: #2d3436;
+    font-size: 12px; font-weight: 700; color: white;
     padding: 4px 10px; border-radius: 20px;
-    background: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.1);
     backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
 /* 2. Workout Styles */
 .workout-tile { 
-    background: #2d3436 !important; /* Force dark */
+    background: rgba(15, 23, 42, 0.8) !important; /* Darker for workout */
     color: white; 
-    border: none;
+    border: 1px solid rgba(255,255,255,0.1);
     overflow: visible;
 }
-.workout-tile.active { border: 2px solid #00b894; }
+.workout-tile.active { border: 2px solid #00cec9; box-shadow: 0 0 20px rgba(0, 206, 201, 0.2); }
 
 .w-header { display: flex; align-items: center; gap: 10px; width: 100%; }
 .w-status-icon { 
     width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.1); 
     display: flex; align-items: center; justify-content: center; font-size: 16px;
 }
-.workout-tile.active .w-status-icon { background: #00b894; color: white; }
+.workout-tile.active .w-status-icon { background: #00cec9; color: #0f172a; }
 
 .w-text-content { flex: 1; display: flex; flex-direction: column; }
-.w-label { font-size: 11px; color: rgba(255,255,255,0.6); font-weight: 600; }
+.w-label { font-size: 11px; color: #94a3b8; font-weight: 600; }
 .w-state { font-size: 14px; font-weight: 700; color: white; }
 
 .w-controls { margin-top: 15px; animation: fadeIn 0.3s; }
 .w-cal-display { display: flex; align-items: baseline; gap: 4px; margin-bottom: 5px; }
-.cal-val { font-size: 24px; font-weight: 800; color: #00b894; line-height: 1; }
-.cal-unit { font-size: 12px; color: rgba(255,255,255,0.6); }
+.cal-val { font-size: 24px; font-weight: 800; color: #00cec9; line-height: 1; text-shadow: 0 0 10px rgba(0, 206, 201, 0.4); }
+.cal-unit { font-size: 12px; color: #94a3b8; }
 
 .w-slider-wrap { padding: 0 5px; }
-.workout-tile :deep(.el-slider__runway) { background-color: rgba(255,255,255,0.2); height: 4px; margin: 10px 0; }
-.workout-tile :deep(.el-slider__bar) { background-color: #00b894; height: 4px; }
-.workout-tile :deep(.el-slider__button) { width: 16px; height: 16px; border: 2px solid #00b894; background: white; }
+.workout-tile :deep(.el-slider__runway) { background-color: rgba(255,255,255,0.1); height: 4px; margin: 10px 0; }
+.workout-tile :deep(.el-slider__bar) { background-color: #00cec9; height: 4px; }
+.workout-tile :deep(.el-slider__button) { width: 16px; height: 16px; border: 2px solid #00cec9; background: #0f172a; }
 
 .w-placeholder { 
     margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.3); 
@@ -342,35 +349,35 @@ function handleLogWeight() {
 .icon-bubble { 
     width: 36px; height: 36px; border-radius: 12px; 
     display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 5px;
-    backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.5);
+    backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);
 }
 .blue { background: rgba(64, 158, 255, 0.1); color: #409eff; }
 .green { background: rgba(0, 184, 148, 0.1); color: #00b894; }
 .orange { background: rgba(253, 203, 110, 0.1); color: #fdcb6e; }
 
 .macro-info { display: flex; flex-direction: column; gap: 2px; }
-.m-label { font-size: 11px; color: #b2bec3; font-weight: 700; }
-.m-val { font-size: 18px; font-weight: 800; color: #2d3436; }
+.m-label { font-size: 11px; color: #94a3b8; font-weight: 700; }
+.m-val { font-size: 18px; font-weight: 800; color: white; }
 .m-val small { font-size: 10px; }
 
 /* 4. Weight Styles */
 .tile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.tile-header h3 { margin: 0; font-size: 16px; color: #2d3436; font-weight: 800; }
+.tile-header h3 { margin: 0; font-size: 16px; color: white; font-weight: 800; }
 .trend-badge { 
-    background: rgba(0, 184, 148, 0.1); color: #00b894; 
+    background: rgba(0, 184, 148, 0.15); color: #00cec9; 
     padding: 4px 8px; border-radius: 8px; font-weight: 800; font-size: 11px; 
 }
-.chart-wrapper { height: 120px; width: 100%; opacity: 0.9; }
+.chart-wrapper { height: 120px; width: 100%; opacity: 1; }
 
 /* 5. History Styles */
-.history-tile h3 { margin: 0 0 15px 0; font-size: 16px; color: #2d3436; font-weight: 800; }
+.history-tile h3 { margin: 0 0 15px 0; font-size: 16px; color: white; font-weight: 800; }
 .history-scroll { overflow-y: auto; height: 100%; display: flex; flex-direction: column; gap: 10px; }
-.h-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.5); }
-.h-date { display: flex; flex-direction: column; align-items: center; background: white; padding: 4px 8px; border-radius: 8px; }
-.d-day { font-weight: 800; font-size: 14px; color: #2d3436; }
-.d-month { font-size: 9px; color: #b2bec3; font-weight: 700; }
+.h-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+.h-date { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 8px; }
+.d-day { font-weight: 800; font-size: 14px; color: white; }
+.d-month { font-size: 9px; color: #cbd5e1; font-weight: 700; }
 .h-val { font-weight: 800; font-size: 15px; }
-.h-val.good { color: #00b894; }
+.h-val.good { color: #00cec9; }
 .h-val.bad { color: #ff7675; }
 
 /* Animation */

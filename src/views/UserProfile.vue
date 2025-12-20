@@ -51,10 +51,24 @@
                 </el-form-item>
 
                 <el-form-item label="性别">
-                    <el-radio-group v-model="form.gender" fill="#409eff">
-                        <el-radio-button label="male">男</el-radio-button>
-                        <el-radio-button label="female">女</el-radio-button>
-                    </el-radio-group>
+                    <div class="gender-selector">
+                        <div 
+                            class="gender-card male" 
+                            :class="{ active: form.gender === 'male' }"
+                            @click="form.gender = 'male'"
+                        >
+                            <el-icon :size="24"><Male /></el-icon>
+                            <span>男</span>
+                        </div>
+                        <div 
+                            class="gender-card female" 
+                            :class="{ active: form.gender === 'female' }"
+                            @click="form.gender = 'female'"
+                        >
+                            <el-icon :size="24"><Female /></el-icon>
+                            <span>女</span>
+                        </div>
+                    </div>
                 </el-form-item>
 
                 <el-row :gutter="20">
@@ -163,7 +177,7 @@ import { reactive, onMounted, ref, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { UserFilled, Postcard, Aim, Check, Edit, Back } from '@element-plus/icons-vue'
+import { UserFilled, Postcard, Aim, Check, Edit, Back, Male, Female } from '@element-plus/icons-vue'
 import { compressImage } from '../utils/compress'
 
 const userStore = useUserStore()
@@ -273,30 +287,33 @@ function saveMotto() {
     flex-direction: column;
     align-items: center;
     padding: 30px 20px;
-    background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
-    border-radius: 0 0 24px 24px;
+    background: linear-gradient(135deg, rgba(142, 125, 255, 0.2) 0%, rgba(142, 125, 255, 0.05) 100%);
+    backdrop-filter: blur(20px);
+    border-radius: 0 0 32px 32px;
     color: white;
     margin-bottom: 30px;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(161, 140, 209, 0.4);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .avatar-wrapper {
     width: 80px;
     height: 80px;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(5px);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 3px solid rgba(255, 255, 255, 0.5);
+    border: 3px solid rgba(255, 255, 255, 0.2);
     margin-bottom: 15px;
     overflow: hidden;
     cursor: pointer;
+    box-shadow: 0 0 20px rgba(142, 125, 255, 0.3);
 }
 .avatar { width: 100%; height: 100%; object-fit: cover; }
-.header-info h2 { margin: 0 0 5px; font-size: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.motto-text { margin: 0; font-size: 14px; opacity: 0.9; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.header-info h2 { margin: 0 0 5px; font-size: 24px; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+.motto-text { margin: 0; font-size: 14px; opacity: 0.8; cursor: pointer; display: flex; align-items: center; gap: 5px; }
 .motto-text:hover { opacity: 1; text-decoration: underline; }
 .motto-edit { width: 200px; }
 
@@ -305,13 +322,51 @@ function saveMotto() {
     padding: 0 15px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
+}
+
+/* Gender Selector */
+.gender-selector {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+}
+.gender-card {
+    flex: 1;
+    height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    transition: all 0.3s;
+    color: #94a3b8;
+}
+.gender-card:hover { background: rgba(255,255,255,0.1); }
+.gender-card.active {
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    border: none;
+}
+.gender-card.male.active {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+.gender-card.female.active {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
 .modern-card {
-    border: none;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.3);
+    color: white;
 }
 
 .section-header {
@@ -319,13 +374,35 @@ function saveMotto() {
     align-items: center;
     font-weight: bold;
     font-size: 16px;
-    color: #2c3e50;
+    color: white;
 }
-.section-icon { margin-right: 8px; font-size: 18px; color: #409eff; }
+.section-icon { margin-right: 8px; font-size: 18px; color: #8e7dff; }
 
 .custom-form :deep(.el-form-item__label) {
-    font-weight: 500;
-    color: #606266;
+    font-weight: 700;
+    color: #e2e8f0; /* 更亮的灰色 */
+    margin-bottom: 8px;
+}
+
+/* 覆盖 Element Plus 输入框样式 (已在全局定义，但这里可能有特异性) */
+.custom-form :deep(.el-input__wrapper), 
+.custom-form :deep(.el-input-number__decrease),
+.custom-form :deep(.el-input-number__increase) {
+    background: rgba(0, 0, 0, 0.2); /* 更深的背景，突出文字 */
+    box-shadow: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: white;
+    transition: all 0.3s;
+}
+.custom-form :deep(.el-input__wrapper.is-focus) {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: #8e7dff;
+    box-shadow: 0 0 0 1px #8e7dff inset;
+}
+.custom-form :deep(.el-input__inner) { 
+    color: white; 
+    font-weight: 700; /* 加粗数值 */
+    font-size: 15px;
 }
 
 .action-area {
@@ -339,13 +416,21 @@ function saveMotto() {
     width: 100%;
     max-width: 300px;
     font-weight: bold;
+    border: none;
 }
 .save-btn {
-    box-shadow: 0 4px 15px rgba(64, 158, 255, 0.3);
+    background: linear-gradient(135deg, #8e7dff 0%, #a29bfe 100%);
+    box-shadow: 0 4px 15px rgba(142, 125, 255, 0.3);
 }
 .logout-btn {
-    margin-left: 0 !important; /* Reset Element Plus margin */
-    border-style: dashed;
+    margin-left: 0 !important;
+    background: rgba(255, 71, 87, 0.1);
+    color: #ff6b81;
+    border: 1px dashed rgba(255, 71, 87, 0.3);
+}
+.logout-btn:hover {
+    background: rgba(255, 71, 87, 0.2);
+    border-color: #ff6b81;
 }
 
 /* Animations */
