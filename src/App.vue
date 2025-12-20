@@ -354,8 +354,9 @@ body {
 .mobile-wrapper {
     width: 100%;
     max-width: 480px;
-    height: 100vh;
-    background: transparent; /* Transparent to show aurora */
+    height: 100vh; /* Fallback for older browsers */
+    height: 100dvh; /* Dynamic Viewport Height: 关键修改，自动避开浏览器工具栏 */
+    background: transparent;
     position: relative;
     box-shadow: 0 0 100px rgba(0,0,0,0.5);
     overflow: hidden;
@@ -367,29 +368,38 @@ body {
 .app-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%; /* Follow parent height */
   position: relative;
 }
 
 /* Main Content */
 .main-content {
   flex: 1; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 1;
+  overflow: hidden; /* 防止内容撑开父容器 */
 }
 
 .content-scroll {
-  flex: 1; overflow-y: auto; padding: 0 20px 100px 20px; scroll-behavior: smooth;
+  flex: 1; 
+  overflow-y: auto; 
+  /* 底部增加更多内边距，确保内容不被导航栏遮挡：基础高度(75px) + 安全区预估(20px) + 额外空隙(25px) */
+  padding: 0 20px 120px 20px; 
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* iOS 惯性滚动 */
 }
 .content-scroll::-webkit-scrollbar { width: 0px; background: transparent; }
 
 /* Mobile Header - Dark Glass */
 .mobile-header {
   height: 60px;
+  flex-shrink: 0; /* 防止被压缩 */
   background: rgba(15, 23, 42, 0.6); 
   backdrop-filter: blur(20px);
   display: grid; 
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 0 20px;
+  padding-top: env(safe-area-inset-top); /* 适配顶部刘海 */
+  height: calc(60px + env(safe-area-inset-top)); /* 自动增高 */
   position: sticky; top: 0; z-index: 50;
   border-bottom: 1px solid var(--glass-border);
 }
@@ -404,15 +414,20 @@ body {
   overflow: hidden; display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2);
 }
-.avatar-mini img { width: 100%; height: 100%; object-fit: cover; }
 
 /* Mobile Bottom Dock - Dark Glass */
 .mobile-dock {
-  position: absolute; bottom: 0; left: 0; width: 100%; height: 75px;
+  position: absolute; bottom: 0; left: 0; width: 100%; 
+  height: auto; /* 让高度自适应 */
+  min-height: 75px;
   background: rgba(15, 23, 42, 0.8);
   backdrop-filter: blur(30px) saturate(180%);
   display: flex; align-items: center; justify-content: space-around;
-  padding-bottom: env(safe-area-inset-bottom);
+  
+  /* 关键：底部内边距适配安全区 */
+  padding-bottom: max(10px, env(safe-area-inset-bottom)); 
+  padding-top: 10px;
+  
   box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
   z-index: 1000;
   border-top: 1px solid var(--glass-border);
@@ -447,7 +462,10 @@ body {
 
 /* FAB */
 .fab-container {
-    position: absolute; bottom: 100px; right: 25px; 
+    position: absolute; 
+    /* 基础距离(90px) + 安全区 */
+    bottom: calc(90px + env(safe-area-inset-bottom)); 
+    right: 25px; 
     display: flex; flex-direction: column; gap: 16px; z-index: 100;
     pointer-events: none; /* 让容器不阻挡点击，按钮单独开启 */
 }
