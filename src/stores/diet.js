@@ -1,183 +1,153 @@
 import { defineStore } from 'pinia'
-import { reactive, computed } from 'vue'
+import { reactive, computed, ref } from 'vue'
 import { useUserStore } from './user'
 import axios from 'axios'
 
 const API_URL = '/api'
 
 export const useDietStore = defineStore('diet', () => {
-  // 结构: { '2023-10-27': { breakfast: [], lunch: [], dinner: [], snack: [] } }
   const logs = reactive({})
   const favorites = reactive([])
   const systemRecipes = reactive([])
+  
+  // 核心修复：dietPlans 不再在模块顶层初始化，避免串台
+  const dietPlans = reactive({})
+  const currentUserId = ref(null)
 
   const today = computed(() => {
     const date = new Date()
     return date.toISOString().split('T')[0]
   })
-  
+
+  // 核心修复：加载特定用户的计划
+  function loadPlans(userId) {
+      if (!userId) return
+      currentUserId.value = userId
+      const saved = localStorage.getItem(`diet_plans_${userId}`)
+      if (saved) {
+          Object.assign(dietPlans, JSON.parse(saved))
+      } else {
+          // 清空旧数据，防止切换账号后残留
+          for (const key in dietPlans) delete dietPlans[key]
+      }
+  }
+
+  function getTodayPlans() {
+      const d = today.value
+      if (!dietPlans[d]) {
+          dietPlans[d] = { breakfast: null, lunch: null, dinner: null }
+      }
+      return dietPlans[d]
+  }
+
+  function setMealPlan(mealType, plan) {
+      const d = today.value
+      if (!dietPlans[d]) dietPlans[d] = { breakfast: null, lunch: null, dinner: null }
+      dietPlans[d][mealType] = plan
+      
+      // 持久化到用户隔离的键中
+      if (currentUserId.value) {
+          localStorage.setItem(`diet_plans_${currentUserId.value}`, JSON.stringify(dietPlans))
+      }
+  }
+
+  function reset() {
+      for (const key in logs) delete logs[key]
+      favorites.splice(0, favorites.length)
+      for (const key in dietPlans) delete dietPlans[key]
+      currentUserId.value = null
+  }
+
   async function fetchRecipes() {
       try {
           const res = await axios.get(`${API_URL}/recipes`)
           systemRecipes.splice(0, systemRecipes.length, ...res.data)
       } catch (e) {
-          console.error("Failed to fetch recipes", e)
+          console.error("Fetch recipes failed", e)
       }
-  }
-
-  function getTodayLog() {
-    if (!logs[today.value]) {
-      logs[today.value] = { breakfast: [], lunch: [], dinner: [], snack: [] }
-    }
-    return logs[today.value]
   }
 
   const todayIntake = computed(() => {
-    const current = getTodayLog()
-    let total = { calories: 0, carbs: 0, protein: 0, fat: 0 }
-    
-    Object.values(current).forEach(meal => {
-      meal.forEach(item => {
-        total.calories += Number(item.calories)
-        total.carbs += Number(item.carbs)
-        total.protein += Number(item.protein)
-        total.fat += Number(item.fat)
+      const dayLog = logs[today.value] || { breakfast: [], lunch: [], dinner: [], snack: [] }
+      let c = 0, p = 0, cr = 0, f = 0
+      Object.values(dayLog).forEach(m => {
+          m.forEach(i => {
+              c += Number(i.calories || 0)
+              p += Number(i.protein || 0)
+              cr += Number(i.carbs || 0)
+              f += Number(i.fat || 0)
+          })
       })
-    })
-    return total
+      return { calories: c, protein: Math.round(p), carbs: Math.round(cr), fat: Math.round(f) }
   })
 
-  // Set data from backend
-  function setLogs(newLogs) {
-      // Clear existing
-      for (const key in logs) delete logs[key];
-      // Assign new
-      if (newLogs) Object.assign(logs, newLogs);
-  }
-
-  function setFavorites(newFavorites) {
-      favorites.splice(0, favorites.length, ...newFavorites)
-  }
-
-  // Reset logs (on logout)
-  function reset() {
-      for (const key in logs) delete logs[key];
-      favorites.splice(0, favorites.length);
-  }
-
-  // Sync logs to backend
-  async function sync() {
-      const userStore = useUserStore()
-      if (!userStore.token) return;
-      
-      try {
-          await axios.put(`${API_URL}/user/sync`, {
-              dietLogs: logs,
-              favoriteFoods: favorites
-          }, {
-              headers: { Authorization: `Bearer ${userStore.token}` }
-          })
-      } catch (error) {
-          console.error("Failed to sync diet logs:", error)
-      }
-  }
-
-  function getAutoMealType() {
-      const hour = new Date().getHours()
-      if (hour >= 5 && hour < 10.5) return 'breakfast'
-      if (hour >= 10.5 && hour < 15) return 'lunch'
-      if (hour >= 17 && hour < 21) return 'dinner'
-      return 'snack'
-  }
-
-  function addFood(mealType, food) {
-    if (!logs[today.value]) {
-      logs[today.value] = { breakfast: [], lunch: [], dinner: [], snack: [] }
-    }
-    
-    const targetMeal = mealType || getAutoMealType()
-    logs[today.value][targetMeal].push(food)
+  function addFood(mealType, food, targetDate) {
+    const dateKey = targetDate || today.value
+    if (!logs[dateKey]) logs[dateKey] = { breakfast: [], lunch: [], dinner: [], snack: [] }
+    const targetMeal = mealType || 'snack'
+    logs[dateKey][targetMeal].push(food)
     sync()
   }
 
   function updateFood(mealType, index, updatedFood) {
       if (logs[today.value] && logs[today.value][mealType]) {
-          // Keep existing properties if not overwritten, but usually we overwrite the stats
-          logs[today.value][mealType][index] = { ...updatedFood }
+          logs[today.value][mealType][index] = updatedFood
           sync()
       }
   }
 
   function removeFood(mealType, index) {
-    if (logs[today.value] && logs[today.value][mealType]) {
-      logs[today.value][mealType].splice(index, 1)
-      sync()
-    }
-  }
-
-  function toggleFavorite(food) {
-      const index = favorites.findIndex(f => f.name === food.name && f.calories === food.calories)
-      if (index > -1) {
-          favorites.splice(index, 1)
-      } else {
-          // Store a clean copy without extra props
-          favorites.push({
-              name: food.name,
-              calories: food.calories,
-              carbs: food.carbs,
-              protein: food.protein,
-              fat: food.fat,
-              weight: food.weight || 100 // Default reference weight
-          })
-      }
-      sync()
-  }
-
-  function isFavorite(food) {
-      return favorites.some(f => f.name === food.name && f.calories === food.calories)
-  }
-
-  function updateFavorite(index, updatedFood) {
-      if (index >= 0 && index < favorites.length) {
-          favorites[index] = { ...updatedFood }
+      if (logs[today.value] && logs[today.value][mealType]) {
+          logs[today.value][mealType].splice(index, 1)
           sync()
       }
   }
-  
-  // AI Feature (Backend)
-  async function analyzeFoodWithAI(description) {
-      const userStore = useUserStore()
-      
-      const payload = {
-          description,
-          userProfile: {
-              gender: userStore.profile.gender,
-              weight: userStore.profile.weight,
-              goal: userStore.profile.goal,
-              bmr: userStore.bmr
-          }
-      }
 
+  async function sync() {
       try {
-          const response = await fetch(`${API_URL}/analyze-food`, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(payload)
+          const userStore = useUserStore()
+          // 同步饮食日志和收藏到后端
+          await axios.put(`${API_URL}/user/sync`, { 
+              dietLogs: logs, 
+              favoriteFoods: favorites 
+          }, {
+              headers: { Authorization: `Bearer ${userStore.token}` }
           })
-
-          if (!response.ok) {
-              throw new Error('服务器响应错误')
-          }
-
-          const data = await response.json()
-          return data
-      } catch (error) {
-          console.error("AI Analysis failed:", error)
-          throw error
-      }
+      } catch (e) { console.error("Sync failed", e) }
   }
 
-  return { logs, favorites, systemRecipes, today, todayIntake, addFood, updateFood, removeFood, getTodayLog, analyzeFoodWithAI, setLogs, setFavorites, reset, toggleFavorite, isFavorite, updateFavorite, fetchRecipes }
+  async function analyzeFoodWithAI(description) {
+      const userStore = useUserStore()
+      const res = await axios.post(`${API_URL}/analyze-food`, { description, userProfile: userStore.profile })
+      return res.data
+  }
+
+  function setLogs(newLogs) { 
+      for (const key in logs) delete logs[key]
+      Object.assign(logs, newLogs || {}) 
+  }
+  function setFavorites(newFavs) { favorites.splice(0, favorites.length, ...(newFavs || [])) }
+  function isFavorite(item) { return favorites.some(f => f.title === item.name || f.name === item.name) }
+  function toggleFavorite(item) {
+      const idx = favorites.findIndex(f => f.title === (item.name || item.title))
+      if (idx > -1) favorites.splice(idx, 1)
+      else favorites.push({ ...item, title: item.name || item.title })
+      sync()
+  }
+
+  function updateFavorite(index, updated) {
+      favorites[index] = { ...favorites[index], ...updated }
+      sync()
+  }
+
+  function removeFavorite(index) {
+      favorites.splice(index, 1)
+      sync()
+  }
+
+  return { 
+      logs, favorites, systemRecipes, today, todayIntake, dietPlans,
+      addFood, updateFood, removeFood, analyzeFoodWithAI, setLogs, setFavorites, 
+      toggleFavorite, isFavorite, updateFavorite, removeFavorite, fetchRecipes, setMealPlan, getTodayPlans, loadPlans, reset
+  }
 })

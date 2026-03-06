@@ -1,42 +1,35 @@
-export const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+/**
+ * 图像处理引擎：统一格式转换与智能压缩
+ */
+export const processImage = (file, maxWidth = 800, quality = 0.7) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = (event) => {
+        reader.onload = (e) => {
             const img = new Image();
-            img.src = event.target.result;
+            img.src = e.target.result;
             img.onload = () => {
+                const canvas = document.createElement('canvas');
                 let width = img.width;
                 let height = img.height;
 
-                // Calculate new dimensions
+                // 等比缩放
                 if (width > maxWidth) {
-                    height = Math.round((height * maxWidth) / width);
+                    height = (maxWidth / width) * height;
                     width = maxWidth;
                 }
 
-                const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
-
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                canvas.toBlob((blob) => {
-                    if (!blob) {
-                        reject(new Error('Canvas is empty'));
-                        return;
-                    }
-                    // Create a new File object
-                    const newFile = new File([blob], file.name, {
-                        type: 'image/jpeg',
-                        lastModified: Date.now(),
-                    });
-                    resolve(newFile);
-                }, 'image/jpeg', quality);
+                // 统一转换为 image/jpeg 格式并压缩
+                const base64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(base64);
             };
-            img.onerror = (error) => reject(error);
+            img.onerror = reject;
         };
-        reader.onerror = (error) => reject(error);
+        reader.onerror = reject;
     });
 };

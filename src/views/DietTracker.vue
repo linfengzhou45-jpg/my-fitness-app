@@ -1,6 +1,6 @@
 <template>
   <div class="timeline-container">
-    <!-- Floating Header -->
+    <!-- Floating Header - Fixed width issue by using max-width and margin -->
     <div class="timeline-header animate-down">
        <div class="date-capsule">
            <button class="nav-arrow" @click="changeDay(-1)"><el-icon><ArrowLeftBold /></el-icon></button>
@@ -40,15 +40,17 @@
                 <div class="card-head">
                     <span class="meal-name">{{ meal.label }}</span>
                     <span class="meal-cal">{{ getMealCalories(meal.key) }} kcal</span>
+                    <!-- Add Button in Header for feedback -->
+                    <el-button link type="primary" :icon="Plus" class="quick-add-btn" @click="openAddForMeal(meal.key)"></el-button>
                 </div>
                 
                 <div v-if="currentLog[meal.key] && currentLog[meal.key].length > 0" class="food-group">
                     <div v-for="(item, idx) in currentLog[meal.key]" :key="idx" class="food-row">
-                        <div class="f-left">
+                        <div class="f-info">
                             <span class="f-name">{{ item.name }}</span>
                             <div class="f-tags">
                                 <span class="tag cal">{{ item.calories }}</span>
-                                <span class="tag macro">C{{ item.carbs }} P{{ item.protein }} F{{ item.fat }}</span>
+                                <span class="tag macro">碳{{ item.carbs }} 蛋{{ item.protein }} 脂{{ item.fat }}</span>
                             </div>
                         </div>
                         <div class="f-actions">
@@ -62,7 +64,7 @@
                 </div>
                 
                 <div v-else class="empty-slot" @click="openAddForMeal(meal.key)">
-                    <span class="plus">+</span> 记录{{ meal.label }}
+                    <span class="plus-icon">+</span> 记录{{ meal.label }}
                 </div>
             </div>
         </div>
@@ -80,12 +82,12 @@
 import { ref, computed, inject } from 'vue'
 import { useDietStore } from '../stores/diet'
 import { useUserStore } from '../stores/user'
-import { Delete, Edit, StarFilled, ArrowLeftBold, ArrowRightBold, Sunrise, Sunny, Sunset, CoffeeCup, Moon } from '@element-plus/icons-vue'
-import dayjs from 'dayjs' // Assuming dayjs or native date logic
+import { Delete, Edit, StarFilled, ArrowLeftBold, ArrowRightBold, Sunrise, Sunny, Sunset, CoffeeCup, Moon, Plus } from '@element-plus/icons-vue'
 
 const dietStore = useDietStore()
 const userStore = useUserStore()
-const openEditFood = inject('openEditFood') // Need to ensure parent provides this or handle logic
+const openEditFood = inject('openEditFood')
+const openGlobalAdd = inject('openGlobalAdd')
 
 const currentDate = ref(dietStore.today)
 const meals = [
@@ -119,146 +121,135 @@ function handleDateChange(val) {
     if (!val) currentDate.value = dietStore.today
 }
 function triggerDatePicker() {
-    // Styling hack: position the real date picker over the text but invisible, or handle programmatically
     const picker = document.querySelector('.hidden-picker .el-input__inner')
-    if(picker) picker.click() // Might need better handling depending on Element Plus version
+    if(picker) picker.click()
 }
 function getMealCalories(key) {
     return currentLog.value[key]?.reduce((acc, c) => acc + Number(c.calories), 0) || 0
 }
 
-// Quick Add (Just opens standard add dialog, theoretically you could pre-select meal)
-// Since the global add dialog doesn't accept meal type param yet, we just open it.
-// In a real 'Deep Refactor', I'd pass the meal type to the add drawer.
 function openAddForMeal(key) {
-    // Logic to open add drawer, potentially focusing specific meal
-    // For now, assume user selects meal type manually in drawer or just generic add
-    // Ideally, emit event or use provide/inject to open specific add flow
-    // I'll assume generic add for now
-    document.querySelector('.add-fab')?.click() 
+    // Open Global Drawer with context: Lock the specific meal and current viewing date
+    openGlobalAdd({
+        mealType: key,
+        date: currentDate.value
+    })
 }
 </script>
 
 <style scoped>
 .timeline-container {
-    padding-bottom: 100px;
-    max-width: 600px; /* Mobile focused width */
-    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 15px; /* Increased padding and ensured box-sizing */
 }
 
-/* Header */
+/* Header - Redesigned to be narrow and responsive */
 .timeline-header {
     display: flex; justify-content: space-between; align-items: center;
-    position: sticky; top: 15px; z-index: 10;
-    background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px);
-    padding: 8px 20px; border-radius: 50px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    margin-bottom: 40px; border: 1px solid rgba(255,255,255,0.1);
-    transition: all 0.3s;
+    position: sticky; top: 10px; z-index: 10;
+    background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(25px);
+    padding: 10px 18px; border-radius: 50px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.1);
 }
-.date-capsule { display: flex; align-items: center; gap: 15px; }
+.date-capsule { display: flex; align-items: center; gap: 12px; }
 .nav-arrow { 
     border: none; background: transparent; color: #94a3b8; cursor: pointer; 
-    display: flex; align-items: center; font-size: 16px; padding: 5px;
+    display: flex; align-items: center; font-size: 14px; padding: 4px;
     transition: color 0.2s;
 }
-.nav-arrow:hover { color: #8e7dff; }
-.nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
-.date-display { display: flex; flex-direction: column; align-items: center; line-height: 1.1; cursor: pointer; position: relative; }
-.hidden-picker { position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; }
-.d-text { font-weight: 800; font-size: 17px; color: white; letter-spacing: -0.5px; }
-.d-sub { font-size: 11px; color: #00cec9; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.nav-arrow:hover:not(:disabled) { color: #8e7dff; }
+.nav-arrow:disabled { opacity: 0.2; }
 
-.daily-total { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
-.t-label { font-size: 10px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-.t-val { font-size: 20px; font-weight: 800; color: white; letter-spacing: -1px; }
+.date-display { display: flex; flex-direction: column; align-items: center; line-height: 1.1; cursor: pointer; position: relative; }
+.hidden-picker { position: absolute; opacity: 0; width: 0px; height: 0px; top: 0; left: 0; pointer-events: none; }
+
+.d-text { font-weight: 800; font-size: 16px; color: white; letter-spacing: -0.5px; }
+.d-sub { font-size: 10px; color: #00cec9; font-weight: 800; text-transform: uppercase; }
+
+.daily-total { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.t-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
+.t-val { font-size: 18px; font-weight: 900; color: white; letter-spacing: -0.5px; }
 
 /* Timeline Body */
-.timeline-body { position: relative; padding: 0 10px; }
+.timeline-body { position: relative; padding: 0; }
 .timeline-line {
-    position: absolute; left: 28px; top: 0; bottom: 0; width: 2px;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
-    background-size: 2px 10px;
+    position: absolute; left: 19px; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
     z-index: 0;
 }
 
 .timeline-item {
-    display: flex; gap: 20px; margin-bottom: 30px; position: relative; z-index: 1;
+    display: flex; gap: 15px; margin-bottom: 25px; position: relative; z-index: 1;
 }
 
 .time-node { flex-shrink: 0; width: 40px; display: flex; justify-content: center; }
 .node-dot {
-    width: 40px; height: 40px; border-radius: 14px;
+    width: 38px; height: 38px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    background: #1e293b; border: 2px solid rgba(255,255,255,0.1); 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    font-size: 18px; transition: transform 0.2s;
+    background: #1e293b; border: 1px solid rgba(255,255,255,0.1); 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    font-size: 16px;
 }
-.timeline-item:hover .node-dot { transform: scale(1.1); border-color: #8e7dff; }
 .node-dot.breakfast { color: #fab1a0; }
 .node-dot.lunch { color: #ffeaa7; }
 .node-dot.dinner { color: #a29bfe; }
 .node-dot.snack { color: #55efc4; }
 
 .content-card {
-    flex: 1; background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(15px);
-    border-radius: 24px;
-    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.1);
+    flex: 1; 
+    min-width: 0; /* CRITICAL: Prevents bento card from overflowing its parent */
+    background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(15px);
+    border-radius: 20px;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
     overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
 }
-.content-card:hover { transform: translateY(-3px); box-shadow: 0 15px 40px -5px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.2); }
 
 .card-head {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 15px 24px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex; align-items: center;
+    padding: 12px 18px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-.meal-name { font-weight: 800; color: white; font-size: 15px; }
-.meal-cal { font-weight: 700; color: #cbd5e1; font-size: 13px; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px; }
+.meal-name { font-weight: 800; color: white; font-size: 15px; flex: 1; }
+.meal-cal { font-weight: 700; color: #94a3b8; font-size: 12px; margin-right: 10px; }
+.quick-add-btn { font-size: 18px; }
 
 .food-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.03);
 }
-.food-row:last-child { border-bottom: none; }
-.f-left { display: flex; flex-direction: column; gap: 5px; }
-.f-name { font-weight: 700; font-size: 16px; color: #e2e8f0; }
-.f-tags { display: flex; gap: 8px; }
-.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 700; letter-spacing: 0.5px; }
-.tag.cal { background: rgba(255,255,255,0.1); color: #cbd5e1; }
-.tag.macro { background: rgba(142, 125, 255, 0.15); color: #a29bfe; font-family: monospace; }
+.f-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.f-name { font-weight: 700; font-size: 15px; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.f-tags { display: flex; gap: 6px; }
+.tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+.tag.cal { background: rgba(255,255,255,0.08); color: #cbd5e1; }
+.tag.macro { background: rgba(142, 125, 255, 0.1); color: #a29bfe; font-family: monospace; }
 
-.f-actions { display: flex; gap: 12px; opacity: 0; transition: opacity 0.2s, transform 0.2s; transform: translateX(10px); }
-.food-row:hover .f-actions { opacity: 1; transform: translateX(0); }
-.icon-btn { border: none; background: transparent; cursor: pointer; color: #64748b; font-size: 16px; padding: 6px; border-radius: 8px; transition: all 0.2s; }
-.icon-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-.icon-btn.fav:hover { color: #ffeaa7; background: rgba(253, 203, 110, 0.2); }
+.f-actions { display: flex; gap: 8px; margin-left: 10px; }
+.icon-btn { border: none; background: transparent; cursor: pointer; color: #64748b; font-size: 14px; padding: 4px; transition: all 0.2s; }
+.icon-btn:hover { color: white; }
 .icon-btn.fav.active { color: #ffeaa7; }
-.icon-btn.del:hover { color: #ff7675; background: rgba(255, 118, 117, 0.2); }
+.icon-btn.del:hover { color: #ff7675; }
 
 .empty-slot {
-    padding: 20px; text-align: center; cursor: pointer;
-    color: #64748b; font-size: 14px; font-weight: 600;
-    transition: all 0.3s;
-    border: 2px dashed rgba(255,255,255,0.05);
-    margin: 10px; border-radius: 16px;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 18px; text-align: center; cursor: pointer;
+    color: #64748b; font-size: 13px; font-weight: 700;
+    transition: all 0.3s; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
 }
-.empty-slot:hover { 
-    border-color: #8e7dff; color: #8e7dff; background: rgba(142, 125, 255, 0.1);
-}
-.plus { font-size: 18px; font-weight: bold; }
+.empty-slot:hover { color: #8e7dff; background: rgba(142, 125, 255, 0.05); }
+.plus-icon { font-size: 16px; font-weight: 900; }
 
 .empty-day-state {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    margin-top: 60px; color: #64748b; gap: 15px; opacity: 0.6;
+    padding: 40px 0; color: #475569; gap: 10px; opacity: 0.6;
 }
-.sleep-icon { font-size: 48px; color: #475569; }
+.sleep-icon { font-size: 40px; }
 
 /* Animations */
 .animate-down { animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 .animate-slide-right { animation: slideRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
-@keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes slideRight { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideRight { from { opacity: 0; transform: translateX(-15px); } to { opacity: 1; transform: translateX(0); } }
 </style>

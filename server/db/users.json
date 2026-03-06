@@ -10,7 +10,7 @@
       "gender": "male",
       "age": 20,
       "height": 172,
-      "weight": 89,
+      "weight": 75.8,
       "activityLevel": 1.45,
       "goal": "cut",
       "allergies": [],
@@ -20,6 +20,18 @@
       {
         "date": "2025-12-15",
         "weight": 89
+      },
+      {
+        "date": "2026-03-01",
+        "weight": 86.8
+      },
+      {
+        "date": "2026-03-05",
+        "weight": 92.7
+      },
+      {
+        "date": "2026-03-06",
+        "weight": 75.8
       }
     ],
     "dietLogs": {
@@ -85,6 +97,50 @@
         ],
         "dinner": [],
         "snack": []
+      },
+      "2026-03-05": {
+        "breakfast": [],
+        "lunch": [
+          {
+            "name": "米饭 (100g, 熟)",
+            "calories": 130,
+            "carbs": 28.2,
+            "protein": 2.7,
+            "fat": 0.3
+          }
+        ],
+        "dinner": [],
+        "snack": []
+      },
+      "2026-03-06": {
+        "breakfast": [
+          {
+            "name": "蛋白粉燕麦粥配鸡蛋杏仁 (80g燕麦, 30g蛋白粉, 2个鸡蛋, 15g杏仁)",
+            "calories": 657,
+            "carbs": 57,
+            "protein": 49,
+            "fat": 25
+          }
+        ],
+        "lunch": [
+          {
+            "name": "糙米饭 (150g熟重), 烤鸡胸肉 (150g), 清炒西兰花 (200g), 橄榄油 (10ml)",
+            "calories": 580,
+            "carbs": 54,
+            "protein": 56,
+            "fat": 17
+          }
+        ],
+        "dinner": [
+          {
+            "name": "烤鳕鱼 (200g), 烤红薯 (200g), 凉拌混合蔬菜 (黄瓜、番茄、生菜) (200g)",
+            "calories": 442,
+            "carbs": 52,
+            "protein": 47,
+            "fat": 3
+          }
+        ],
+        "snack": []
       }
     },
     "favoriteFoods": [
@@ -113,6 +169,25 @@
         "protein": 2.8,
         "fat": 1.4,
         "baseWeight": 20
+      },
+      {
+        "id": 2,
+        "title": "牛肉西兰花拌饭",
+        "calories": 480,
+        "carbs": 45,
+        "protein": 35,
+        "fat": 12,
+        "baseWeight": 400,
+        "image": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&q=80",
+        "description": "健身黄金搭档，碳水蛋白平衡",
+        "ingredients": [
+          "瘦牛肉 120g",
+          "西兰花 150g",
+          "糙米饭 120g",
+          "蚝油少许"
+        ],
+        "instructions": "牛肉切片快炒，西兰花断生，与糙米饭混合均匀。",
+        "name": "牛肉西兰花拌饭"
       }
     ],
     "avatar": "/uploads/1765950831199-952491776.jpg",

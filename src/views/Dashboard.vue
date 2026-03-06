@@ -1,394 +1,422 @@
 <template>
-  <div class="bento-dashboard">
+  <div class="bento-dashboard animate-fade-in">
     <!-- Header -->
     <header class="dashboard-head">
       <div>
-        <h1 class="greeting">早安, {{ userStore.profile.name || 'Champion' }}! ☀️</h1>
-        <p class="subtitle">让今天的每一卡路里都算数。</p>
+        <h1 class="greeting">早安, {{ userStore.profile.name || 'Champion' }}!</h1>
+        <p class="subtitle">今天也要保持活力哦 ✨</p>
       </div>
-      <button class="action-btn" @click="dialogWeightVisible = true">
-         <el-icon><ScaleToOriginal /></el-icon> 记体重
-      </button>
+      <div class="head-actions">
+        <div class="avatar-mini" @click="$router.push('/profile')">
+            <img v-if="userStore.avatar" :src="userStore.avatar" />
+            <el-icon v-else><User /></el-icon>
+        </div>
+        <button class="action-btn" @click="dialogWeightVisible = true">记体重</button>
+      </div>
     </header>
 
-    <!-- Bento Grid (Mobile Only Layout) -->
     <div class="bento-grid">
-      <!-- 1. Hero: Calories -->
-      <div class="bento-card calorie-hero animate-pop delay-1">
-         <div class="hero-content">
-            <div class="hero-text">
-                <span class="label">今日热量</span>
-                <span class="big-val">{{ todayIntake.calories }}</span>
-                <span class="target">/ {{ targetCalories }} kcal</span>
+      <!-- 1. Calorie Hero with Plans -->
+      <div class="bento-card calorie-hero">
+         <div class="hero-top">
+            <div class="hero-stats">
+                <span class="label">今日摄入</span>
+                <span class="big-val">{{ todayIntake.calories || 0 }}</span>
+                <span class="target">目标 {{ targetCalories }} kcal</span>
             </div>
-            <div class="ring-wrapper">
+            <div class="hero-progress">
                  <el-progress 
-                    type="dashboard" 
+                    type="circle" 
                     :percentage="Number(Math.min((todayIntake.calories / targetCalories) * 100, 100).toFixed(1))" 
-                    :width="110"
-                    :stroke-width="10"
-                    :color="caloriesStatusColor"
-                >
-                    <template #default="{ percentage }">
-                        <div class="ring-inner">
-                            <span class="ring-pct">{{ percentage }}%</span>
-                        </div>
-                    </template>
-                </el-progress>
+                    :width="75"
+                    :stroke-width="8"
+                    :color="progressColor" 
+                />
             </div>
          </div>
-         <div class="mobile-hero-status">{{ getCalorieDiffText }}</div>
-      </div>
 
-      <!-- 2. Workout Toggle -->
-      <div class="bento-card workout-tile animate-pop delay-2" :class="{ active: workoutActive }" @click="toggleWorkout">
-          <div class="w-header">
-              <div class="w-status-icon">
-                  <el-icon><Stopwatch /></el-icon>
-              </div>
-              <div class="w-text-content">
-                  <span class="w-label">运动模式</span>
-                  <span class="w-state">{{ workoutActive ? '进行中' : '休息中' }}</span>
-              </div>
-              <el-switch v-model="workoutActive" active-color="#00b894" inactive-color="#636e72" @click.stop size="small" />
-          </div>
-          
-           <div v-if="workoutActive" class="w-controls" @click.stop>
-                <div class="w-cal-display">
-                    <span class="cal-val">{{ workoutCalories }}</span>
-                    <span class="cal-unit">kcal</span>
-                </div>
-                <div class="w-slider-wrap">
-                    <el-slider 
-                        v-model="workoutCalories" 
-                        :min="50" 
-                        :max="1500" 
-                        :step="10" 
-                        :show-tooltip="false"
-                        size="small"
-                        @change="updateWorkout"
-                    />
-                </div>
-           </div>
-           <div v-else class="w-placeholder">
-               点击开启以记录额外消耗
-           </div>
-      </div>
-
-      <!-- 3. Macros (Row of 3) -->
-      <div class="bento-card macro-card carb animate-pop delay-3">
-         <div class="icon-bubble blue"><el-icon><IceCream /></el-icon></div>
-         <div class="macro-info">
-            <span class="m-label">碳水</span>
-            <span class="m-val">{{ todayIntake.carbs }}<small>g</small></span>
-         </div>
-      </div>
-      
-      <div class="bento-card macro-card protein animate-pop delay-3">
-         <div class="icon-bubble green"><el-icon><Chicken /></el-icon></div>
-         <div class="macro-info">
-            <span class="m-label">蛋白</span>
-            <span class="m-val">{{ todayIntake.protein }}<small>g</small></span>
-         </div>
-      </div>
-
-      <div class="bento-card macro-card fat animate-pop delay-3">
-         <div class="icon-bubble orange"><el-icon><Burger /></el-icon></div>
-         <div class="macro-info">
-            <span class="m-label">脂肪</span>
-            <span class="m-val">{{ todayIntake.fat }}<small>g</small></span>
-         </div>
-      </div>
-
-      <!-- 4. Weight Chart -->
-      <div class="bento-card weight-tile animate-pop delay-4">
-         <div class="tile-header">
-             <h3>体重趋势</h3>
-             <span class="trend-badge">30天</span>
-         </div>
-         <div class="chart-wrapper">
-             <BaseChart :options="weightChartOptions" height="100%" width="100%" />
-         </div>
-      </div>
-
-      <!-- 5. History -->
-      <div class="bento-card history-tile animate-pop delay-5">
-         <h3>近期结余</h3>
-         <div class="history-scroll">
-             <div v-for="h in historyData" :key="h.date" class="h-row">
-                 <div class="h-date">
-                     <span class="d-day">{{ h.date.split('-')[2] }}</span>
-                     <span class="d-month">{{ h.date.split('-')[1] }}月</span>
-                 </div>
-                 <div class="h-val" :class="h.balance >= 0 ? 'good' : 'bad'">
-                     {{ h.balance >= 0 ? '+' : '' }}{{ h.balance }}
-                 </div>
+         <!-- Meal Plan Grid -->
+         <div class="meal-plans-grid">
+             <div v-for="meal in mealsConfig" :key="meal.key" class="plan-slot" @click="handleSlotClick(meal.key)">
+                 <span class="ps-label">{{ meal.label }}推荐</span>
+                 <template v-if="getMealPlan(meal.key)">
+                    <span class="ps-content">{{ typeof getMealPlan(meal.key) === 'object' ? getMealPlan(meal.key).food : getMealPlan(meal.key) }}</span>
+                    <span class="ps-cal" v-if="getMealPlan(meal.key).calories">{{ getMealPlan(meal.key).calories }}kcal</span>
+                 </template>
+                 <span v-else class="ps-content empty">待制订</span>
              </div>
-             <el-empty v-if="historyData.length === 0" description="No Data" :image-size="60" />
+         </div>
+
+         <div class="one-key-plan-btn" @click="triggerOneKeyPlan">
+             <el-icon><MagicStick /></el-icon> 一键制订三餐计划
+         </div>
+      </div>
+
+      <!-- 2. Workout Card -->
+      <div class="bento-card workout-card" :class="{ 'workout-active': workoutActive }">
+          <div class="w-header">
+              <div class="w-title-group">
+                <div class="w-status-dot"></div>
+                <span class="w-title">运动模式</span>
+              </div>
+              <div class="custom-switch-wrap">
+                <el-switch v-model="workoutActive" size="small" active-color="#00b894" />
+              </div>
+          </div>
+          <div v-if="workoutActive" class="w-body animate-pop-in">
+              <div class="slider-container">
+                <el-slider v-model="workoutCalories" :min="50" :max="1000" :show-tooltip="false" @change="syncWorkout" />
+              </div>
+              <div class="w-val">期望消耗 <span>{{ workoutCalories }}</span> kcal</div>
+
+              <div class="workout-suggestions">
+                  <div class="ws-grid">
+                      <div class="ws-item">
+                          <div class="ws-icon-wrap">
+                            <span class="ws-symbol">🏋️</span>
+                          </div>
+                          <span class="ws-label">力量训练</span>
+                          <span class="ws-time">{{ calculateTime(3.5) }} <small>min</small></span>
+                      </div>
+                      <div class="ws-item featured">
+                          <div class="ws-icon-wrap">
+                            <span class="ws-symbol">🏃</span>
+                          </div>
+                          <span class="ws-label">慢跑</span>
+                          <span class="ws-time">{{ calculateTime(8.0) }} <small>min</small></span>
+                      </div>
+                      <div class="ws-item">
+                          <div class="ws-icon-wrap">
+                            <span class="ws-symbol">🚶</span>
+                          </div>
+                          <span class="ws-label">快走</span>
+                          <span class="ws-time">{{ calculateTime(3.0) }} <small>min</small></span>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <!-- 3. Macros Row -->
+      <div class="macros-row">
+          <div class="bento-card macro-box"><span class="ml">碳水</span><span class="mv">{{ todayIntake.carbs }}g</span></div>
+          <div class="bento-card macro-box"><span class="ml">蛋白</span><span class="mv">{{ todayIntake.protein }}g</span></div>
+          <div class="bento-card macro-box"><span class="ml">脂肪</span><span class="mv">{{ todayIntake.fat }}g</span></div>
+      </div>
+
+      <!-- 4. Chart -->
+      <div class="bento-card chart-card">
+         <div class="c-header">体重趋势</div>
+         <div class="c-content">
+             <BaseChart :options="chartOptions" height="100%" />
          </div>
       </div>
     </div>
 
-    <!-- Weight Dialog -->
-    <el-dialog v-model="dialogWeightVisible" title="记录体重" width="300px" center class="glass-dialog" destroy-on-close>
-        <div class="w-input-area">
-             <el-input-number v-model="newWeight" :precision="1" :step="0.1" :min="30" :max="300" size="large" />
-             <span class="unit">kg</span>
+    <!-- Recommendation Options & Detail -->
+    <el-dialog v-model="recDialogVisible" :title="currentMealDetail ? '计划详情' : '制订饮食计划'" width="85%" class="glass-dialog" center append-to-body>
+        <div v-if="currentMealDetail" class="meal-detail-view">
+            <div class="md-food-name">{{ typeof currentMealDetail === 'object' ? currentMealDetail.food : currentMealDetail }}</div>
+            <div class="md-macros" v-if="typeof currentMealDetail === 'object' && currentMealDetail.calories">
+                <div class="md-macro"><span>{{ currentMealDetail.calories }}</span><label>热量</label></div>
+                <div class="md-macro"><span>{{ currentMealDetail.carbs }}g</span><label>碳水</label></div>
+                <div class="md-macro"><span>{{ currentMealDetail.protein }}g</span><label>蛋白质</label></div>
+                <div class="md-macro"><span>{{ currentMealDetail.fat }}g</span><label>脂肪</label></div>
+            </div>
+            <el-divider>重新规划</el-divider>
         </div>
-        <template #footer>
-            <el-button type="primary" @click="handleLogWeight" size="large" round style="width: 100%">保存</el-button>
-        </template>
+        <div class="rec-list">
+            <div class="rec-item" @click="openRecipeLibrary">
+                <el-icon :size="24" color="#00cec9"><Reading /></el-icon>
+                <div class="rec-info"><span class="rt">从食谱库选取</span><span class="rs">手动挑选菜品加入计划</span></div>
+            </div>
+        </div>
+    </el-dialog>
+
+    <!-- AI Plan Result / Loading -->
+    <el-dialog v-model="aiVisible" title="AI 计划建议" width="90%" class="glass-dialog" center append-to-body>
+        <div v-if="userStore.profile.allergies.length > 0" class="allergy-notice">
+            已避开忌口: {{ userStore.profile.allergies.join('、') }}
+        </div>
+        <div v-if="aiLoading" class="ai-wait">
+            <div class="pulse-loader"></div>
+            <p>正在努力计算中...</p>
+        </div>
+        <div v-else-if="aiResult" class="ai-res">
+            <template v-if="aiResult.meals && aiResult.meals.length > 0">
+                <div v-for="m in aiResult.meals" :key="m.type" class="ai-res-item">
+                    <strong>{{ m.type === 'breakfast' ? '早餐' : m.type === 'lunch' ? '午餐' : '晚餐' }}:</strong> {{ m.food }} ({{ m.calories }}kcal)
+                </div>
+            </template>
+            <div v-else-if="aiResult.food" class="ai-res-item">
+                <strong>{{ currentSlot === 'breakfast' ? '早餐' : currentSlot === 'lunch' ? '午餐' : '晚餐' }}:</strong> {{ aiResult.food }} ({{ aiResult.calories }}kcal)
+                <div class="ai-macros" v-if="aiResult.carbs !== undefined">
+                    <span>碳水: {{aiResult.carbs}}g</span>
+                    <span>蛋白: {{aiResult.protein}}g</span>
+                    <span>脂肪: {{aiResult.fat}}g</span>
+                </div>
+            </div>
+            <p v-else>{{ aiResult.summary || aiResult.analysis || aiResult.advice || aiResult.food }}</p>
+            <el-button type="primary" round @click="aiVisible = false" style="width: 100%; margin-top: 15px">采纳建议</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog v-model="dialogWeightVisible" title="记录体重" width="300px" center class="glass-dialog">
+        <el-input-number v-model="newWeight" :precision="1" :step="0.1" style="width: 100%" />
+        <template #footer><el-button type="primary" @click="saveWeight" round style="width: 100%">保存</el-button></template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { useDietStore } from '../stores/diet'
 import { storeToRefs } from 'pinia'
 import BaseChart from '../components/BaseChart.vue'
 import { ElMessage } from 'element-plus'
-import { ScaleToOriginal, Stopwatch, IceCream, Chicken, Burger } from '@element-plus/icons-vue'
+import { ScaleToOriginal, Stopwatch, MagicStick, Opportunity, Reading, Warning } from '@element-plus/icons-vue'
+import axios from 'axios'
 
-const userStore = useUserStore()
-const dietStore = useDietStore()
+const userStore = useUserStore(); const dietStore = useDietStore(); const router = useRouter()
 const { targetCalories, workoutSettings, weightHistory } = storeToRefs(userStore)
-const { todayIntake, logs, today } = storeToRefs(dietStore)
+const { todayIntake } = storeToRefs(dietStore)
 
-const dialogWeightVisible = ref(false)
-const newWeight = ref(userStore.profile.weight)
-
-// Workout Logic
-const workoutActive = ref(workoutSettings.value.active)
-const workoutCalories = ref(workoutSettings.value.calories)
-
-const updateWorkout = () => {
-    userStore.setWorkoutMode(workoutActive.value, null, workoutCalories.value)
-}
-const toggleWorkout = () => {
-    // Prevent toggle if clicking controls (handled by stop modifiers, but safe to check)
+const mealsConfig = [{ key: 'breakfast', label: '早餐' }, { key: 'lunch', label: '午餐' }, { key: 'dinner', label: '晚餐' }]
+const getMealPlan = (key) => {
+    const plans = dietStore.getTodayPlans()
+    return (plans && plans[key]) ? plans[key] : null
 }
 
-watch(workoutSettings, (newVal) => {
-    workoutActive.value = newVal.active
-    workoutCalories.value = newVal.calories
-}, { deep: true })
+const dialogWeightVisible = ref(false); const newWeight = ref(userStore.profile.weight)
+const recDialogVisible = ref(false); const currentSlot = ref(null)
+const aiVisible = ref(false); const aiLoading = ref(false); const aiResult = ref(null)
 
-watch(workoutActive, (val) => {
-    updateWorkout()
+const currentMealDetail = computed(() => {
+    if (!currentSlot.value) return null
+    return getMealPlan(currentSlot.value)
 })
 
-// Visuals
-const caloriesStatusColor = computed(() => {
-  const p = (todayIntake.value.calories / targetCalories.value) * 100
-  if (p > 100) return '#ff7675'
-  if (p > 85) return '#fdcb6e'
-  return '#00b894'
-})
-const getCalorieDiffText = computed(() => {
-    const diff = targetCalories.value - todayIntake.value.calories
-    return diff >= 0 ? `剩余 ${diff}` : `超 ${Math.abs(diff)}`
-})
-
-const historyData = computed(() => {
-    const days = []
-    const sorted = Object.keys(logs.value).sort().reverse().slice(0, 10)
-    sorted.forEach(date => {
-        if (date === today.value) return
-        let cal = 0
-        Object.values(logs.value[date]).forEach(m => m.forEach(i => cal += Number(i.calories)))
-        days.push({ date, balance: targetCalories.value - cal })
-    })
-    return days
-})
-
-const weightChartOptions = computed(() => {
-    const dates = weightHistory.value.map(i => i.date.slice(5))
-    const weights = weightHistory.value.map(i => i.weight)
-    return {
-        grid: { top: 10, bottom: 20, left: 0, right: 0 },
-        tooltip: { 
-            trigger: 'axis',
-            backgroundColor: 'rgba(30, 41, 59, 0.9)',
-            borderColor: 'rgba(255,255,255,0.1)',
-            textStyle: { color: 'white' }
-        },
-        xAxis: { type: 'category', data: dates, show: false },
-        yAxis: { type: 'value', min: 'dataMin', show: false },
-        series: [{
-            data: weights, type: 'line', smooth: true, showSymbol: false,
-            lineStyle: { width: 4, color: '#8e7dff' }, // Lighter purple
-            areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{offset: 0, color: 'rgba(142, 125, 255, 0.3)'}, {offset: 1, color: 'rgba(142, 125, 255, 0)'}] } }
-        }]
-    }
-})
-
-function handleLogWeight() {
-    userStore.logWeight(newWeight.value)
-    dialogWeightVisible.value = false
-    ElMessage.success('Saved')
+function handleSlotClick(key) { currentSlot.value = key; recDialogVisible.value = true; }
+function openRecipeLibrary() { 
+    recDialogVisible.value = false
+    localStorage.setItem('planning_meal_type', currentSlot.value)
+    router.push('/recipes') 
 }
+
+async function triggerOneKeyPlan() {
+    aiVisible.value = true; aiLoading.value = true;
+    const prompt = `制定今日三餐。忌口: ${userStore.profile.allergies.join('、') || '无'}。返回JSON格式: {"meals": [{"type":"breakfast","food":"...","calories":0,"carbs":0,"protein":0,"fat":0},{"type":"lunch","food":"...","calories":0,"carbs":0,"protein":0,"fat":0},{"type":"dinner","food":"...","calories":0,"carbs":0,"protein":0,"fat":0}]}`;
+    try {
+        const res = await axios.post('/api/analyze-food', { description: prompt, userProfile: userStore.profile });
+        if (res.data.meals) res.data.meals.forEach(m => {
+            const key = m.type.toLowerCase().includes('break') ? 'breakfast' : m.type.toLowerCase().includes('lunch') ? 'lunch' : 'dinner'
+            dietStore.setMealPlan(key, m)
+        });
+        aiResult.value = res.data;
+    } catch (e) { ElMessage.error('规划失败') } finally { aiLoading.value = false }
+}
+
+const workoutActive = ref(workoutSettings.value.active); const workoutCalories = ref(workoutSettings.value.calories)
+const syncWorkout = () => userStore.setWorkoutMode(workoutActive.value, null, workoutCalories.value)
+watch(workoutActive, syncWorkout)
+
+const calculateTime = (met) => {
+    // Formula: Time(min) = (Calories * 60) / (MET * Weight)
+    const weight = userStore.profile.weight || 70
+    const time = (workoutCalories.value * 60) / (met * weight)
+    return Math.round(time)
+}
+
+const progressColor = computed(() => {
+    const p = (todayIntake.value.calories / targetCalories.value) * 100
+    return p > 100 ? '#ff7675' : p > 85 ? '#fdcb6e' : '#00b894'
+})
+
+const chartOptions = computed(() => ({
+    grid: { top: 5, bottom: 5, left: 0, right: 0 },
+    xAxis: { type: 'category', data: weightHistory.value.map(i => i.date.slice(5)), show: false },
+    yAxis: { type: 'value', min: 'dataMin', show: false },
+    series: [{ data: weightHistory.value.map(i => i.weight), type: 'line', smooth: true, showSymbol: false, lineStyle: { width: 3, color: '#8e7dff' }, areaStyle: { opacity: 0.1 } }]
+}))
+
+function saveWeight() { userStore.logWeight(newWeight.value); dialogWeightVisible.value = false; ElMessage.success('已同步'); }
 </script>
 
 <style scoped>
-.bento-dashboard {
-    padding-bottom: 100px;
-    width: 100%;
-    margin: 0 auto;
+.bento-dashboard { padding: 15px; width: 100%; box-sizing: border-box; }
+.dashboard-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-top: 10px; }
+.greeting { font-size: 24px; font-weight: 900; margin: 0; color: white; letter-spacing: -0.5px; }
+.subtitle { font-size: 13px; color: #94a3b8; margin: 5px 0 0; }
+.head-actions { display: flex; align-items: center; gap: 12px; }
+.avatar-mini { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,0.05); overflow: hidden; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
+.avatar-mini img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-mini .el-icon { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; }
+.action-btn { background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; }
+.action-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.15); }
+
+.bento-grid { display: flex; flex-direction: column; gap: 15px; }
+.bento-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(20px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); padding: 20px; color: white; }
+
+.calorie-hero { display: flex; flex-direction: column; gap: 15px; }
+.hero-top { display: flex; justify-content: space-between; align-items: center; }
+.hero-stats { display: flex; flex-direction: column; }
+.big-val { font-size: 36px; font-weight: 900; line-height: 1; }
+.label { font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
+.target { font-size: 12px; color: #64748b; }
+
+.meal-plans-grid { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 8px; 
+  width: 100%;
+}
+.plan-slot { 
+  background: rgba(255,255,255,0.05); 
+  border-radius: 12px; 
+  padding: 10px 4px; 
+  text-align: center; 
+  border: 1px solid rgba(255,255,255,0.05); 
+  cursor: pointer;
+  min-width: 0;
+  transition: all 0.3s ease;
+}
+.plan-slot:active {
+  transform: scale(0.95);
+  background: rgba(255,255,255,0.1);
+}
+.ps-label { font-size: 10px; color: #94a3b8; display: block; margin-bottom: 2px; }
+.ps-cal { font-size: 10px; color: #00cec9; display: block; margin-top: 2px; font-weight: 500; }
+.ps-content { 
+  font-size: 12px; 
+  font-weight: 700; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  display: block;
+  color: #f8fafc;
+}
+.ps-content.empty { color: rgba(255,255,255,0.2); }
+
+.one-key-plan-btn { background: linear-gradient(90deg, rgba(142, 125, 255, 0.1), rgba(0, 206, 201, 0.1)); border: 1px dashed var(--primary); border-radius: 12px; padding: 12px; text-align: center; font-size: 13px; font-weight: 700; color: #a29bfe; cursor: pointer; }
+
+.meal-detail-view { text-align: center; padding-bottom: 10px; }
+.md-food-name { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 15px; }
+.md-macros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.md-macro { background: rgba(255,255,255,0.05); padding: 10px 5px; border-radius: 12px; display: flex; flex-direction: column; }
+.md-macro span { font-size: 14px; font-weight: 700; color: #00cec9; }
+.md-macro label { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+
+.w-header { display: flex; justify-content: space-between; align-items: center; }
+.w-title-group { display: flex; align-items: center; gap: 8px; }
+.w-status-dot { 
+    width: 6px; height: 6px; border-radius: 50%; background: #475569;
+    transition: all 0.4s ease;
+}
+.workout-active .w-status-dot { 
+    background: #00b894; 
+    box-shadow: 0 0 8px #00b894;
+    animation: dot-pulse 2s infinite;
+}
+@keyframes dot-pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
+.w-title { font-size: 15px; font-weight: 800; color: #f8fafc; }
+
+/* 高级感开关定制 */
+.custom-switch-wrap {
+    padding: 2px;
+    border-radius: 20px;
+    transition: all 0.4s ease;
+}
+.workout-active .custom-switch-wrap {
+    background: rgba(0, 184, 148, 0.1);
+    box-shadow: 0 0 15px rgba(0, 184, 148, 0.2);
+}
+:deep(.el-switch__core) {
+    background-color: rgba(255,255,255,0.1) !important;
+    border: none !important;
+}
+:deep(.el-switch.is-checked .el-switch__core) {
+    background-color: #00b894 !important;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+}
+:deep(.el-switch__action) {
+    background-color: #f8fafc !important;
 }
 
-.dashboard-head {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px; padding: 0 5px;
+.workout-card { 
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.05);
 }
-.greeting { 
-    font-size: 24px; font-weight: 800; margin: 0; 
-    background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%); 
-    -webkit-background-clip: text; color: transparent; 
-    letter-spacing: -0.5px;
-}
-.subtitle { margin: 2px 0 0; color: #94a3b8; font-weight: 500; font-size: 13px; }
-.action-btn {
-    padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); 
-    background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-    font-weight: 700; color: white; cursor: pointer;
-    display: flex; align-items: center; gap: 5px; transition: all 0.3s;
-    font-size: 13px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
-.action-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
-
-/* BENTO GRID SYSTEM (MOBILE ONLY) */
-.bento-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-auto-rows: minmax(100px, auto);
-    gap: 15px;
-    grid-template-areas: 
-        "hero hero hero"
-        "work work work"
-        "carb prot fat"
-        "weight weight weight"
-        "hist hist hist";
+.workout-active { 
+    border-color: rgba(0, 184, 148, 0.3); 
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 1));
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(0, 184, 148, 0.1);
 }
 
-.bento-card {
-    background: rgba(30, 41, 59, 0.6);
-    backdrop-filter: blur(20px);
-    border-radius: 24px; padding: 15px;
-    position: relative; overflow: hidden;
-    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+.slider-container { padding: 15px 5px 5px; }
+:deep(.el-slider__runway) { background-color: rgba(255,255,255,0.05); height: 3px; }
+:deep(.el-slider__bar) { background-color: #00b894; height: 3px; }
+:deep(.el-slider__button) { 
+    width: 12px; height: 12px; border: 2px solid #00b894; background-color: #0f172a; 
+    transition: transform 0.2s;
+}
+:deep(.el-slider__button:hover) { transform: scale(1.2); }
+
+.w-val { font-size: 12px; color: #94a3b8; text-align: center; margin-bottom: 25px; font-weight: 500; }
+.w-val span { font-size: 20px; font-weight: 900; color: #00b894; font-family: monospace; }
+
+.workout-suggestions { 
+    background: rgba(0, 0, 0, 0.3); 
+    border-radius: 20px; 
+    padding: 20px 10px; 
+    border: 1px solid rgba(255,255,255,0.03);
+}
+.ws-grid { display: flex; justify-content: space-around; align-items: flex-end; }
+.ws-item { display: flex; flex-direction: column; align-items: center; opacity: 0.2; transition: all 0.5s ease; }
+.workout-active .ws-item { opacity: 0.85; } /* 统一亮度，不再区分 featured 的透明度 */
+.workout-active .ws-item.featured { transform: translateY(-3px); }
+
+.ws-icon-wrap { 
+    width: 40px; height: 40px; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.4s ease;
 }
 
-/* Grid Areas */
-.calorie-hero { grid-area: hero; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 20px; }
-.workout-tile { grid-area: work; display: flex; flex-direction: column; justify-content: space-between; padding: 15px 20px; }
-.macro-card { grid-column: span 1; grid-row: span 1; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 5px; padding: 12px; }
-.carb { grid-area: carb; }
-.prot { grid-area: prot; }
-.fat { grid-area: fat; }
-.weight-tile { grid-area: weight; min-height: 180px; display: flex; flex-direction: column; }
-.history-tile { grid-area: hist; min-height: 200px; }
-
-/* 1. Hero Styles */
-.hero-content { display: flex; justify-content: space-between; width: 100%; align-items: center; z-index: 1; }
-.hero-text { display: flex; flex-direction: column; }
-.hero-text .label { font-size: 12px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px; }
-.hero-text .big-val { font-size: 42px; font-weight: 800; line-height: 1; color: white; letter-spacing: -1px; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
-.hero-text .target { font-size: 14px; color: #94a3b8; font-family: monospace; font-weight: 600; }
-.ring-inner { display: flex; flex-direction: column; align-items: center; }
-.ring-pct { font-size: 20px; font-weight: 800; color: white; }
-.mobile-hero-status {
-    position: absolute; bottom: 10px; right: 20px;
-    font-size: 12px; font-weight: 700; color: white;
-    padding: 4px 10px; border-radius: 20px;
-    background: rgba(255,255,255,0.1);
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255,255,255,0.1);
+/* 核心：将符号转换为高质感白色剪影 */
+.ws-symbol {
+    font-size: 28px;
+    filter: grayscale(1) brightness(10) contrast(10); /* 强制转为纯白剪影，去除 Emoji 原始色彩 */
+    opacity: 0.9;
 }
 
-/* 2. Workout Styles */
-.workout-tile { 
-    background: rgba(15, 23, 42, 0.8) !important; /* Darker for workout */
-    color: white; 
-    border: 1px solid rgba(255,255,255,0.1);
-    overflow: visible;
+.workout-active .ws-icon-wrap { 
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2)); 
 }
-.workout-tile.active { border: 2px solid #00cec9; box-shadow: 0 0 20px rgba(0, 206, 201, 0.2); }
+.ws-label { font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 700; letter-spacing: 0.5px; }
+.ws-time { font-size: 15px; font-weight: 900; color: #f1f5f9; }
+.ws-time small { font-size: 10px; color: #64748b; margin-left: 2px; }
 
-.w-header { display: flex; align-items: center; gap: 10px; width: 100%; }
-.w-status-icon { 
-    width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.1); 
-    display: flex; align-items: center; justify-content: center; font-size: 16px;
-}
-.workout-tile.active .w-status-icon { background: #00cec9; color: #0f172a; }
+.macros-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.macro-box { padding: 15px 5px; text-align: center; }
+.ml { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 5px; }
+.mv { font-size: 16px; font-weight: 800; }
 
-.w-text-content { flex: 1; display: flex; flex-direction: column; }
-.w-label { font-size: 11px; color: #94a3b8; font-weight: 600; }
-.w-state { font-size: 14px; font-weight: 700; color: white; }
+.chart-card { height: 160px; display: flex; flex-direction: column; }
+.c-header { font-weight: 800; font-size: 14px; margin-bottom: 10px; }
+.c-content { flex: 1; height: 100px; }
 
-.w-controls { margin-top: 15px; animation: fadeIn 0.3s; }
-.w-cal-display { display: flex; align-items: baseline; gap: 4px; margin-bottom: 5px; }
-.cal-val { font-size: 24px; font-weight: 800; color: #00cec9; line-height: 1; text-shadow: 0 0 10px rgba(0, 206, 201, 0.4); }
-.cal-unit { font-size: 12px; color: #94a3b8; }
+.rec-list { display: flex; flex-direction: column; gap: 10px; }
+.rec-item { display: flex; align-items: center; gap: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 15px; cursor: pointer; }
+.rt { font-weight: 800; display: block; }
+.rs { font-size: 11px; color: #94a3b8; }
 
-.w-slider-wrap { padding: 0 5px; }
-.workout-tile :deep(.el-slider__runway) { background-color: rgba(255,255,255,0.1); height: 4px; margin: 10px 0; }
-.workout-tile :deep(.el-slider__bar) { background-color: #00cec9; height: 4px; }
-.workout-tile :deep(.el-slider__button) { width: 16px; height: 16px; border: 2px solid #00cec9; background: #0f172a; }
-
-.w-placeholder { 
-    margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.3); 
-    text-align: center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;
-}
-
-/* 3. Macro Styles */
-.icon-bubble { 
-    width: 36px; height: 36px; border-radius: 12px; 
-    display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 5px;
-    backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);
-}
-.blue { background: rgba(64, 158, 255, 0.1); color: #409eff; }
-.green { background: rgba(0, 184, 148, 0.1); color: #00b894; }
-.orange { background: rgba(253, 203, 110, 0.1); color: #fdcb6e; }
-
-.macro-info { display: flex; flex-direction: column; gap: 2px; }
-.m-label { font-size: 11px; color: #94a3b8; font-weight: 700; }
-.m-val { font-size: 18px; font-weight: 800; color: white; }
-.m-val small { font-size: 10px; }
-
-/* 4. Weight Styles */
-.tile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.tile-header h3 { margin: 0; font-size: 16px; color: white; font-weight: 800; }
-.trend-badge { 
-    background: rgba(0, 184, 148, 0.15); color: #00cec9; 
-    padding: 4px 8px; border-radius: 8px; font-weight: 800; font-size: 11px; 
-}
-.chart-wrapper { height: 120px; width: 100%; opacity: 1; }
-
-/* 5. History Styles */
-.history-tile h3 { margin: 0 0 15px 0; font-size: 16px; color: white; font-weight: 800; }
-.history-scroll { overflow-y: auto; height: 100%; display: flex; flex-direction: column; gap: 10px; }
-.h-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
-.h-date { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 8px; }
-.d-day { font-weight: 800; font-size: 14px; color: white; }
-.d-month { font-size: 9px; color: #cbd5e1; font-weight: 700; }
-.h-val { font-weight: 800; font-size: 15px; }
-.h-val.good { color: #00cec9; }
-.h-val.bad { color: #ff7675; }
-
-/* Animation */
-.animate-pop { animation: popIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.delay-1 { animation-delay: 0.05s; }
-.delay-2 { animation-delay: 0.1s; }
-.delay-3 { animation-delay: 0.15s; }
-.delay-4 { animation-delay: 0.2s; }
-.delay-5 { animation-delay: 0.25s; }
-@keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-
-.w-input-area { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px 0; }
-.w-input-area .unit { font-size: 18px; font-weight: 800; color: #2d3436; }
+.ai-res-item { margin-bottom: 8px; color: #fff; font-size: 14px; }
+.ai-macros { display: flex; gap: 10px; font-size: 11px; color: #94a3b8; margin-top: 4px; }
+.ai-macros span { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+.allergy-notice { background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.2); padding: 8px; border-radius: 10px; color: #ff7675; font-size: 12px; margin-bottom: 10px; text-align: center; }
+.ai-wait { text-align: center; padding: 20px 0; }
+.pulse-loader { width: 30px; height: 30px; background: var(--primary); border-radius: 50%; margin: 0 auto 10px; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } }
 </style>

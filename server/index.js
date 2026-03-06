@@ -278,15 +278,18 @@ app.get('/api/admin/stats', authenticateToken, isAdmin, (req, res) => {
 // --- AI Route ---
 const client = new OpenAI({
     baseURL: process.env.AI_BASE_URL || 'https://api.deepseek.com',
-    apiKey: process.env.AI_API_KEY 
+    apiKey: process.env.AI_API_KEY,
+    timeout: 90000 // 增加到 90 秒超时
 });
 
 app.post('/api/analyze-food', async (req, res) => {
-  // ... (Keep existing AI logic same) ...
   try {
     const { description, userProfile } = req.body;
-    if (!description) return res.status(400).json({ error: '请提供食物描述' });
+    if (!description) return res.status(400).json({ error: '请提供内容' });
+    
     const modelName = process.env.AI_MODEL_NAME || "deepseek-chat";
+    
+    // 构建上下文
     let promptContext = '';
     if (userProfile) {
         promptContext = `
@@ -297,22 +300,62 @@ app.post('/api/analyze-food', async (req, res) => {
         - BMR: ${userProfile.bmr} kcal
         `;
     }
-    const systemPrompt = `你是一个高级运动营养师。请务必只返回纯 JSON 格式的数据。
-    格式: {"name": "食物名", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "analysis": "...", "advice": "..."}`;
-    const userPrompt = `${promptContext} 用户吃了: "${description}". 估算成分并建议。`;
+
+    const systemPrompt = `
+    你是一个高级运动营养师。
+    请务必只返回纯 JSON 格式的数据，不要包含 markdown 标记 (如 \`\`\`json)。
+    格式要求:
+    {
+      "food": "标准食物名称",
+      "calories": 0,
+      "carbs": 0,
+      "protein": 0,
+      "fat": 0,
+      "analysis": "成分分析",
+      "advice": "针对该用户的建议",
+      "meals": [] // 仅当用户明确要求制定多餐计划时返回此数组
+    }
+    `;
+
+    const userPrompt = `
+    ${promptContext}
+    用户请求内容: "${description}"
+    任务:
+    1. 如果用户请求单次饮食建议（如“建议晚餐”），请直接在 JSON 根节点返回 food, calories, carbs, protein, fat 等字段，不要包含 meals 数组。
+    2. 如果用户请求完整饮食方案（如“制定今日三餐”），请将每餐详情放入 meals 数组中，每项包含 { "type": "breakfast/lunch/dinner", "food": "...", "calories": 0, ... }。
+    3. 始终根据用户的资料、目标和忌口，给出简短建议。
+    `;
+
+    console.log(`[AI Request] Model: ${modelName}`);
 
     const completion = await client.chat.completions.create({
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+        messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+        ],
         model: modelName,
         temperature: 0.1,
     });
+
     const text = completion.choices[0].message.content;
+    console.log('[AI Raw Response Snippet]:', text.substring(0, 100));
+
+    // 清理并解析 JSON (结合备份逻辑与健壮性清洗)
     const jsonStr = text.replace(/```json|```/g, '').trim();
-    const data = JSON.parse(jsonStr);
-    res.json(data);
+    const startIndex = jsonStr.indexOf('{');
+    const endIndex = jsonStr.lastIndexOf('}');
+    
+    if (startIndex !== -1 && endIndex !== -1) {
+        const finalJson = jsonStr.substring(startIndex, endIndex + 1);
+        const data = JSON.parse(finalJson);
+        res.json(data);
+    } else {
+        throw new Error('AI 未返回有效的 JSON 结构');
+    }
+
   } catch (error) {
     console.error('AI Error:', error);
-    res.status(500).json({ error: 'AI 服务暂时不可用' });
+    res.status(500).json({ error: 'AI 服务暂时不可用，请检查网络或稍后再试' });
   }
 });
 

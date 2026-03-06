@@ -1,166 +1,131 @@
 [
   {
     "id": 1,
-    "title": "减脂鸡胸肉餐",
-    "calories": 450,
-    "carbs": 40,
+    "title": "清蒸鲈鱼配时蔬",
+    "calories": 320,
+    "carbs": 10,
     "protein": 45,
-    "fat": 10,
+    "fat": 8,
     "baseWeight": 350,
-    "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80",
-    "description": "高蛋白低脂，适合减脂期午餐",
+    "image": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80",
+    "description": "经典粤式清蒸工艺，保留鱼肉原始鲜甜，高蛋白极低脂，是减脂期的深度饱腹首选。",
     "ingredients": [
-      "鸡胸肉 150g",
+      "鲈鱼 200g (去鳞洗净)",
       "西兰花 100g",
-      "糙米饭 100g",
-      "橄榄油 5g"
+      "蒸鱼豉油 15ml",
+      "姜片/姜丝 10g",
+      "葱丝 5g"
     ],
-    "instructions": "鸡胸肉煎熟，蔬菜水煮，搭配糙米饭。"
+    "instructions": "1. 鲈鱼两面斜划三刀，塞入姜片，大火上蒸笼蒸8-10分钟；\n2. 将蒸出的多余水分倒掉，铺上新鲜葱丝，淋入热好的蒸鱼豉油；\n3. 西兰花用水焯熟，摆盘即可。建议不额外加油，清淡健康。"
+  },
+  {
+    "id": 2,
+    "title": "黑椒牛肉西兰花拌饭",
+    "calories": 480,
+    "carbs": 45,
+    "protein": 35,
+    "fat": 12,
+    "baseWeight": 400,
+    "image": "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80",
+    "description": "健身界的‘黄金搭档’，黑椒的辛香完美衬托牛肉的肉质，糙米提供持久饱腹感，营养非常均衡。",
+    "ingredients": [
+      "瘦牛肉里脊 120g (切片)",
+      "西兰花 150g",
+      "糙米饭/黑米饭 120g",
+      "现磨黑胡椒/蚝油 少许"
+    ],
+    "instructions": "1. 牛肉片加入少许淀粉和生抽腌制10分钟，肉质更滑嫩；\n2. 热锅喷少量橄榄油，牛肉大火快炒至变色，加入黑胡椒碎；\n3. 放入焯过水的西兰花翻炒均匀，最后铺在温热的糙米饭上搅拌享用。"
   },
   {
     "id": 3,
-    "title": "燕麦牛奶早餐杯",
+    "title": "蓝莓奇亚籽燕麦杯",
     "calories": 350,
     "carbs": 50,
     "protein": 15,
     "fat": 8,
     "baseWeight": 300,
-    "image": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=800&q=80",
-    "description": "快速便捷，饱腹感强",
+    "image": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=800&q=80",
+    "description": "风靡全球的Overnight Oats，富含膳食纤维和抗氧化因子，口感丝滑如布丁，是理想的早起能量补给。",
     "ingredients": [
-      "燕麦片 50g",
-      "脱脂牛奶 200ml",
-      "蓝莓 20g",
-      "奇亚籽 5g"
+      "老式燕麦片 50g",
+      "脱脂牛奶/燕麦奶 200ml",
+      "新鲜蓝莓 30g",
+      "奇亚籽 10g",
+      "无糖希腊酸奶 50g"
     ],
-    "instructions": "混合所有材料，冷藏过夜口感更佳。"
+    "instructions": "1. 在密封杯中按顺序加入燕麦、奇亚籽和牛奶，搅拌均匀；\n2. 铺上一层希腊酸奶和新鲜蓝莓；\n3. 密封后放入冰箱冷藏4小时以上（建议过夜），燕麦充分吸收液体后口感极佳。"
   },
   {
     "id": 4,
-    "title": "兰州牛肉拉面",
-    "calories": 600,
-    "carbs": 80,
-    "protein": 30,
-    "fat": 20,
-    "baseWeight": 500,
-    "image": "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=800&q=80",
-    "description": "地道风味，汤鲜面劲道",
+    "title": "虾仁牛油果温沙拉",
+    "calories": 280,
+    "carbs": 12,
+    "protein": 22,
+    "fat": 18,
+    "baseWeight": 250,
+    "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80",
+    "description": "牛油果的细腻与虾仁的Q弹交织，提供优质单不饱和脂肪酸和Omega-3，生酮或低碳饮食者的最爱。",
     "ingredients": [
-      "拉面 200g",
-      "牛肉片 100g",
-      "白萝卜 50g",
-      "香菜",
-      "蒜苗",
-      "辣椒油"
+      "去皮虾仁 100g",
+      "成熟牛油果 半个",
+      "圣女果 5个",
+      "混合生菜 50g",
+      "柠檬油醋汁"
     ],
-    "instructions": "煮面，牛肉切片，白萝卜煮熟，加入香菜蒜苗和特制辣椒油。"
+    "instructions": "1. 虾仁加入黑胡椒略微腌制，水开后煮1-2分钟立刻捞出过凉水；\n2. 牛油果对半切开去核，划成方块；\n3. 生菜垫底，摆上虾仁、牛油果和对半切的圣女果，淋上少许柠檬汁和极简油醋汁拌匀。"
   },
   {
     "id": 5,
-    "title": "回锅肉饭",
-    "calories": 700,
-    "carbs": 70,
-    "protein": 25,
-    "fat": 35,
-    "baseWeight": 450,
-    "image": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&q=80",
-    "description": "香辣可口，米饭杀手",
+    "title": "嫩煎龙利鱼配柠檬",
+    "calories": 220,
+    "carbs": 5,
+    "protein": 38,
+    "fat": 6,
+    "baseWeight": 200,
+    "image": "https://images.unsplash.com/photo-1532336414038-cf1905044314?auto=format&fit=crop&w=800&q=80",
+    "description": "龙利鱼肉质极嫩且无刺，极简的烹饪方式最大程度降低了热量，出锅时的柠檬清香令人胃口大开。",
     "ingredients": [
-      "五花肉 150g",
-      "青椒 50g",
-      "蒜苗 30g",
-      "豆瓣酱",
-      "米饭 200g"
+      "龙利鱼柳 180g",
+      "新鲜柠檬 1片",
+      "海盐/混合香草",
+      "橄榄油喷雾"
     ],
-    "instructions": "五花肉煮熟切片，煸炒出油，加入青椒蒜苗豆瓣酱，配米饭。"
+    "instructions": "1. 鱼柳用厨房纸吸干表面水分（这是外焦里嫩的关键）；\n2. 撒上少许海盐和混合香草碎双面腌制；\n3. 平底锅喷少量橄榄油，中小火双面各煎3分钟至微黄，吃前挤上新鲜柠檬汁提鲜。"
   },
   {
     "id": 6,
-    "title": "番茄鸡蛋面",
-    "calories": 480,
-    "carbs": 60,
-    "protein": 20,
-    "fat": 18,
-    "baseWeight": 400,
-    "image": "https://images.unsplash.com/photo-1626804475297-411d8631c021?w=800&q=80",
-    "description": "家常美味，简单营养",
+    "title": "日式黄瓜荞麦凉面",
+    "calories": 380,
+    "carbs": 55,
+    "protein": 18,
+    "fat": 5,
+    "baseWeight": 300,
+    "image": "https://images.unsplash.com/photo-1626804475297-411d8631c021?auto=format&fit=crop&w=800&q=80",
+    "description": "荞麦面具有极低的升糖指数（GI），饱腹感极强。清脆的黄瓜丝与特制和风汁让整道菜清爽无负担。",
     "ingredients": [
-      "面条 150g",
-      "番茄 200g",
-      "鸡蛋 2个",
-      "葱花"
+      "纯荞麦面 80g",
+      "水煮蛋 1个",
+      "黄瓜/红萝卜丝 50g",
+      "和风酱汁 (生抽+代糖+芥末)"
     ],
-    "instructions": "番茄炒蛋，加入开水煮面，面熟后放入番茄鸡蛋汤中。"
+    "instructions": "1. 荞麦面入沸水煮4-5分钟，捞出后立即投入冰水中揉洗去除淀粉气，口感更劲道；\n2. 滤干水分，铺上新鲜黄瓜丝和切半的水煮蛋；\n3. 倒入冷藏过的和风汁，点缀少许熟白芝麻即可食用。"
   },
   {
     "id": 7,
-    "title": "水煮肉片",
-    "calories": 600,
-    "carbs": 25,
-    "protein": 40,
-    "fat": 40,
-    "baseWeight": 400,
-    "image": "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&q=80",
-    "description": "麻辣鲜香，肉片滑嫩",
+    "title": "迷迭香空气炸锅鸡胸肉",
+    "calories": 420,
+    "carbs": 40,
+    "protein": 42,
+    "fat": 9,
+    "baseWeight": 350,
+    "image": "https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=800&q=80",
+    "description": "利用空气炸锅的热风对流锁住水分，红薯作为复合碳水提供能量，是训练后的完美增肌餐。",
     "ingredients": [
-      "猪里脊 200g",
-      "豆芽 100g",
-      "青菜 100g",
-      "豆瓣酱",
-      "辣椒",
-      "花椒"
+      "厚切鸡胸肉 150g",
+      "红薯/薯仔 150g",
+      "鲜迷迭香/大蒜粉",
+      "橄榄油 5ml"
     ],
-    "instructions": "肉片腌制，配菜焯水，豆瓣酱炒香，加入高汤煮肉片。"
-  },
-  {
-    "id": 8,
-    "title": "西红柿炒蛋",
-    "calories": 320,
-    "carbs": 20,
-    "protein": 15,
-    "fat": 20,
-    "baseWeight": 250,
-    "image": "https://images.unsplash.com/photo-1596627008696-2677d24222df?w=800&q=80",
-    "description": "家常经典，酸甜可口",
-    "ingredients": [
-      "西红柿 2个",
-      "鸡蛋 3个",
-      "葱花"
-    ],
-    "instructions": "鸡蛋炒散，西红柿炒出汁，混合翻炒。"
-  },
-  {
-    "id": 9,
-    "title": "肉夹馍",
-    "calories": 500,
-    "carbs": 50,
-    "protein": 25,
-    "fat": 25,
-    "baseWeight": 150,
-    "image": "https://images.unsplash.com/photo-1619860860774-1e7e17343432?w=800&q=80",
-    "description": "外酥里嫩，肉香四溢",
-    "ingredients": [
-      "白吉馍 1个",
-      "卤肉 100g",
-      "青椒",
-      "香菜"
-    ],
-    "instructions": "白吉馍加热，夹入剁碎的卤肉和青椒香菜。"
-  },
-  {
-    "id": 10,
-    "title": "麻辣香锅",
-    "calories": 800,
-    "carbs": 50,
-    "protein": 40,
-    "fat": 50,
-    "baseWeight": 500,
-    "image": "https://images.unsplash.com/photo-1555126634-323283e090fa?w=800&q=80",
-    "description": "自由搭配，麻辣过瘾",
-    "ingredients": [
-      "各种蔬菜、肉类、丸子等",
-      "麻辣香锅底料"
-    ],
-    "instructions": "食材焯水，加入香锅底料大火翻炒。"
+    "instructions": "1. 鸡胸肉切成厚块，红薯切成均匀的小方块；\n2. 加入橄榄油、大蒜粉、海盐和新鲜迷迭香搅拌均匀，腌制15分钟；\n3. 放入空气炸锅，190度烘烤15-20分钟，中途翻面一次，直至红薯边缘微焦，鸡肉熟透。"
   }
 ]

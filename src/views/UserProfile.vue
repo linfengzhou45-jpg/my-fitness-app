@@ -178,7 +178,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { UserFilled, Postcard, Aim, Check, Edit, Back, Male, Female } from '@element-plus/icons-vue'
-import { compressImage } from '../utils/compress'
+import { processImage } from '../utils/compress'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -238,18 +238,15 @@ function handleAvatarSuccess(res) {
 
 function beforeAvatarUpload(rawFile) {
   if (rawFile.type !== 'image/jpeg' && rawFile.type !== 'image/png') {
-    ElMessage.error('Avatar picture must be JPG or PNG format!')
+    ElMessage.error('请上传 JPG 或 PNG 格式图片')
     return false
   } 
   
-  // Always compress to ensure small base64 string
-  return compressImage(rawFile, 300, 0.7).then(compressedFile => {
-      // Check size again just in case, but it should be small now
-      if (compressedFile.size / 1024 / 1024 > 5) {
-           ElMessage.error('图片即使压缩后仍过大，请更换图片')
-           return false
-      }
-      return compressedFile
+  return processImage(rawFile, 300, 0.7).then(base64 => {
+      const arr = base64.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+      while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+      return new File([u8arr], rawFile.name, {type:mime});
   }).catch(err => {
       console.error(err)
       ElMessage.error('图片处理失败')
@@ -276,9 +273,9 @@ function saveMotto() {
 
 <style scoped>
 .profile-container {
-    padding-bottom: 80px; /* Spacing for bottom nav */
-    max-width: 800px;
+    width: 100%;
     margin: 0 auto;
+    padding: 10px 0;
 }
 
 /* Header */
