@@ -13,11 +13,22 @@ export const useDietStore = defineStore('diet', () => {
   // 核心修复：dietPlans 不再在模块顶层初始化，避免串台
   const dietPlans = reactive({})
   const currentUserId = ref(null)
+  const pendingMealContext = reactive({ mealType: null, date: null })
 
   const today = computed(() => {
     const date = new Date()
     return date.toISOString().split('T')[0]
   })
+
+  function setPendingContext(mealType, date) {
+      pendingMealContext.mealType = mealType
+      pendingMealContext.date = date
+  }
+
+  function clearPendingContext() {
+      pendingMealContext.mealType = null
+      pendingMealContext.date = null
+  }
 
   // 核心修复：加载特定用户的计划
   function loadPlans(userId) {
@@ -127,11 +138,19 @@ export const useDietStore = defineStore('diet', () => {
       Object.assign(logs, newLogs || {}) 
   }
   function setFavorites(newFavs) { favorites.splice(0, favorites.length, ...(newFavs || [])) }
-  function isFavorite(item) { return favorites.some(f => f.title === item.name || f.name === item.name) }
+  function isFavorite(item) { 
+      const name = item.name || item.title
+      return favorites.some(f => (f.name || f.title) === name) 
+  }
   function toggleFavorite(item) {
-      const idx = favorites.findIndex(f => f.title === (item.name || item.title))
-      if (idx > -1) favorites.splice(idx, 1)
-      else favorites.push({ ...item, title: item.name || item.title })
+      const name = item.name || item.title
+      const idx = favorites.findIndex(f => (f.name || f.title) === name)
+      if (idx > -1) {
+          favorites.splice(idx, 1)
+      } else {
+          // 确保推入的对象结构一致，且只推入一次
+          favorites.push({ ...item, title: name, name: name })
+      }
       sync()
   }
 
@@ -146,8 +165,9 @@ export const useDietStore = defineStore('diet', () => {
   }
 
   return { 
-      logs, favorites, systemRecipes, today, todayIntake, dietPlans,
+      logs, favorites, systemRecipes, today, todayIntake, dietPlans, pendingMealContext,
       addFood, updateFood, removeFood, analyzeFoodWithAI, setLogs, setFavorites, 
-      toggleFavorite, isFavorite, updateFavorite, removeFavorite, fetchRecipes, setMealPlan, getTodayPlans, loadPlans, reset
+      toggleFavorite, isFavorite, updateFavorite, removeFavorite, fetchRecipes, setMealPlan, getTodayPlans, loadPlans, reset,
+      setPendingContext, clearPendingContext, sync
   }
 })

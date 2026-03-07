@@ -247,7 +247,18 @@ function saveWeight() { userStore.logWeight(newWeight.value); dialogWeightVisibl
 <style scoped>
 .bento-dashboard { padding: 15px; width: 100%; box-sizing: border-box; }
 .dashboard-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-top: 10px; }
-.greeting { font-size: 24px; font-weight: 900; margin: 0; color: white; letter-spacing: -0.5px; }
+.greeting { 
+    font-size: 24px; 
+    font-weight: 900; 
+    margin: 0; 
+    color: white; 
+    letter-spacing: -0.5px; 
+    width: 225px; /* 固定宽度，*/
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0; /* 防止被挤压 */
+}
 .subtitle { font-size: 13px; color: #94a3b8; margin: 5px 0 0; }
 .head-actions { display: flex; align-items: center; gap: 12px; }
 .avatar-mini { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,0.05); overflow: hidden; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; }

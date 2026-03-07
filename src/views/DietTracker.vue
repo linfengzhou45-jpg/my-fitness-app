@@ -1,27 +1,19 @@
 <template>
   <div class="timeline-container">
-    <!-- Floating Header - Fixed width issue by using max-width and margin -->
+    <!-- 极简头部：仅保留日期文字 -->
     <div class="timeline-header animate-down">
-       <div class="date-capsule">
-           <button class="nav-arrow" @click="changeDay(-1)"><el-icon><ArrowLeftBold /></el-icon></button>
-           <el-date-picker
-            v-model="currentDate"
-            type="date"
-            format="MM月DD日"
-            value-format="YYYY-MM-DD"
-            :clearable="false"
-            class="hidden-picker"
-            @change="handleDateChange"
-          />
-           <div class="date-display" @click="triggerDatePicker">
-               <span class="d-text">{{ formattedDate }}</span>
-               <span class="d-sub" v-if="isToday">今天</span>
-           </div>
-           <button class="nav-arrow" @click="changeDay(1)" :disabled="isToday"><el-icon><ArrowRightBold /></el-icon></button>
-       </div>
-       <div class="daily-total">
-           <span class="t-label">摄入</span>
-           <span class="t-val">{{ dayIntake.calories }}</span>
+       <el-date-picker
+        v-model="currentDate"
+        type="date"
+        format="MM月DD日"
+        value-format="YYYY-MM-DD"
+        :clearable="false"
+        class="hidden-picker"
+        @change="handleDateChange"
+      />
+       <div class="date-only-display" @click="triggerDatePicker">
+           <span class="d-text">{{ formattedDate }}</span>
+           <span class="d-sub" v-if="isToday">今天</span>
        </div>
     </div>
 
@@ -139,38 +131,36 @@ function openAddForMeal(key) {
 
 <style scoped>
 .timeline-container {
-    width: 100%;
+    width: auto;
+    margin: -15px -15px 0; 
     box-sizing: border-box;
-    padding: 10px 15px; /* Increased padding and ensured box-sizing */
+    padding: 15px 30px 15px 30px; /* 左右均调整为 30px */
+    overflow-x: hidden;
 }
 
-/* Header - Redesigned to be narrow and responsive */
+/* 极简日期栏：移除背景和边框 */
 .timeline-header {
-    display: flex; justify-content: space-between; align-items: center;
-    position: sticky; top: 10px; z-index: 10;
-    background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(25px);
-    padding: 10px 18px; border-radius: 50px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.1);
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    position: sticky; 
+    top: 5px; 
+    z-index: 10;
+    padding: 10px 0;
+    margin-bottom: 20px;
+    background: transparent;
 }
-.date-capsule { display: flex; align-items: center; gap: 12px; }
-.nav-arrow { 
-    border: none; background: transparent; color: #94a3b8; cursor: pointer; 
-    display: flex; align-items: center; font-size: 14px; padding: 4px;
-    transition: color 0.2s;
+.date-only-display { 
+    display: flex; 
+    align-items: baseline; 
+    gap: 8px;
+    cursor: pointer;
+    padding: 6px 16px;
 }
-.nav-arrow:hover:not(:disabled) { color: #8e7dff; }
-.nav-arrow:disabled { opacity: 0.2; }
 
-.date-display { display: flex; flex-direction: column; align-items: center; line-height: 1.1; cursor: pointer; position: relative; }
+.d-text { font-weight: 800; font-size: 18px; color: white; }
+.d-sub { font-size: 12px; color: #00cec9; font-weight: 800; }
 .hidden-picker { position: absolute; opacity: 0; width: 0px; height: 0px; top: 0; left: 0; pointer-events: none; }
-
-.d-text { font-weight: 800; font-size: 16px; color: white; letter-spacing: -0.5px; }
-.d-sub { font-size: 10px; color: #00cec9; font-weight: 800; text-transform: uppercase; }
-
-.daily-total { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
-.t-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
-.t-val { font-size: 18px; font-weight: 900; color: white; letter-spacing: -0.5px; }
 
 /* Timeline Body */
 .timeline-body { position: relative; padding: 0; }
@@ -181,7 +171,7 @@ function openAddForMeal(key) {
 }
 
 .timeline-item {
-    display: flex; gap: 15px; margin-bottom: 25px; position: relative; z-index: 1;
+    display: flex; gap: 5px; margin-bottom: 25px; position: relative; z-index: 1;
 }
 
 .time-node { flex-shrink: 0; width: 40px; display: flex; justify-content: center; }

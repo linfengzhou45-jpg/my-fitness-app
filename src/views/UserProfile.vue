@@ -243,13 +243,13 @@ function beforeAvatarUpload(rawFile) {
   } 
   
   return processImage(rawFile, 300, 0.7).then(base64 => {
-      const arr = base64.split(','), mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-      while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-      return new File([u8arr], rawFile.name, {type:mime});
+      // Use fetch to convert data URL to Blob, which is more robust than manual atob
+      return fetch(base64).then(res => res.blob()).then(blob => {
+          return new File([blob], rawFile.name, { type: 'image/jpeg' });
+      });
   }).catch(err => {
-      console.error(err)
-      ElMessage.error('图片处理失败')
+      console.error('Image processing failed:', err)
+      ElMessage.error('图片处理失败，请重试')
       return false
   })
 }

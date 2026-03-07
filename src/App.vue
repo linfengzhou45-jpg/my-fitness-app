@@ -38,10 +38,18 @@
               </div>
           </div>
 
-          <router-link to="/recipes" class="dock-item" active-class="active">
+          <router-link 
+            to="/recipes" 
+            class="dock-item" 
+            :class="{ active: $route.path === '/recipes' && $route.query.tab !== 'fav' }"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
           </router-link>
-          <router-link to="/profile" class="dock-item" active-class="active">
+          <router-link 
+            to="/profile" 
+            class="dock-item" 
+            :class="{ active: $route.path === '/profile' || ($route.path === '/recipes' && $route.query.tab === 'fav') }"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </router-link>
         </nav>
@@ -162,6 +170,7 @@ const addContext = reactive({ date: null, mealType: null })
 function openGlobalAdd(context = {}) {
     addContext.date = context.date || null
     addContext.mealType = context.mealType || null
+    dietStore.setPendingContext(addContext.mealType, addContext.date)
     addDrawerVisible.value = true
 }
 provide('openGlobalAdd', openGlobalAdd)
@@ -208,7 +217,11 @@ function openManualAdd() {
     addDrawerVisible.value = false; manualDialogVisible.value = true;
 }
 function triggerAiFromMenu() { addDrawerVisible.value = false; aiDialogVisible.value = true; aiResult.value = null; aiDescription.value = ''; }
-function goToRecipeLibrary() { addDrawerVisible.value = false; router.push('/recipes'); }
+function goToRecipeLibrary() { 
+    addDrawerVisible.value = false; 
+    dietStore.setPendingContext(addContext.mealType, addContext.date)
+    router.push('/recipes'); 
+}
 
 async function handleManualSubmit() {
     if (!foodForm.name) return ElMessage.warning('请输入名称')
@@ -274,7 +287,18 @@ body { margin: 0; font-family: sans-serif; background-color: var(--bg-dark); col
 .orb-global { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3; }
 .orb-1 { width: 400px; height: 400px; background: #6c5ce7; top: -50px; left: -50px; }
 .orb-2 { width: 300px; height: 300px; background: #00cec9; bottom: -50px; right: -50px; }
-.mobile-wrapper { width: 100%; max-width: 480px; height: 100vh; position: relative; z-index: 10; border-left: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); }
+.mobile-wrapper { 
+    width: 100%; 
+    max-width: 480px; 
+    height: 100vh; 
+    position: relative; 
+    z-index: 10; 
+    border-left: 1px solid rgba(255,255,255,0.05); 
+    border-right: 1px solid rgba(255,255,255,0.05);
+    overflow-x: hidden; /* 核心加固：防止任何页面内容撑宽整体布局 */
+    display: flex;
+    flex-direction: column;
+}
 .app-layout { display: flex; flex-direction: column; height: 100%; }
 .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .content-scroll { flex: 1; overflow-y: auto; padding: 15px 15px 20px; }
