@@ -88,11 +88,42 @@ const isAdmin = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
-        res.status(403).json({ error: '需要管理员权限' });
+        res.sendStatus(403);
     }
 };
 
-// --- Auth Routes ---
+// --- Admin Recipes Management ---
+app.post('/api/admin/recipes', authenticateToken, isAdmin, (req, res) => {
+    const recipes = getRecipes();
+    const recipeData = req.body;
+
+    if (recipeData.id) {
+        // 更新现有食谱
+        const index = recipes.findIndex(r => r.id === recipeData.id);
+        if (index !== -1) {
+            recipes[index] = { ...recipes[index], ...recipeData };
+        }
+    } else {
+        // 创建新食谱
+        recipeData.id = Date.now();
+        recipes.push(recipeData);
+    }
+
+    saveRecipes(recipes);
+    res.json({ message: '操作成功' });
+});
+
+app.delete('/api/admin/recipes/:id', authenticateToken, isAdmin, (req, res) => {
+    const id = parseInt(req.params.id);
+    let recipes = getRecipes();
+    const originalLength = recipes.length;
+    recipes = recipes.filter(r => r.id !== id);
+    
+    if (recipes.length === originalLength) return res.status(404).json({ error: '食谱不存在' });
+    
+    saveRecipes(recipes);
+    res.json({ message: '删除成功' });
+});
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, password, email } = req.body;
@@ -170,19 +201,19 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
 // --- User Data Routes ---
 app.put('/api/user/sync', authenticateToken, (req, res) => {
     try {
-        const { profile, weightHistory, dietLogs, favoriteFoods, avatar, motto } = req.body;
+        const { profile, weightHistory, dietLogs, favoriteFoods, dietPlans, avatar, motto } = req.body;
         const users = getUsers();
         const userIndex = users.findIndex(u => u.id === req.user.id);
-        
+
         if (userIndex === -1) return res.sendStatus(404);
-        
+
         // Update fields
         if (profile) users[userIndex].profile = profile;
         if (weightHistory) users[userIndex].weightHistory = weightHistory;
         if (dietLogs) users[userIndex].dietLogs = dietLogs;
         if (favoriteFoods) users[userIndex].favoriteFoods = favoriteFoods;
-        if (avatar !== undefined) users[userIndex].avatar = avatar;
-        if (motto !== undefined) users[userIndex].motto = motto;
+        if (dietPlans) users[userIndex].dietPlans = dietPlans;
+        if (avatar !== undefined) users[userIndex].avatar = avatar;        if (motto !== undefined) users[userIndex].motto = motto;
         
         saveUsers(users);
         res.json({ message: '同步成功' });
@@ -306,7 +337,7 @@ app.post('/api/analyze-food', async (req, res) => {
     请务必只返回纯 JSON 格式的数据，不要包含 markdown 标记 (如 \`\`\`json)。
     格式要求:
     {
-      "food": "标准食物名称",
+      "name": "标准食物名称",
       "calories": 0,
       "carbs": 0,
       "protein": 0,
@@ -321,8 +352,8 @@ app.post('/api/analyze-food', async (req, res) => {
     ${promptContext}
     用户请求内容: "${description}"
     任务:
-    1. 如果用户请求单次饮食建议（如“建议晚餐”），请直接在 JSON 根节点返回 food, calories, carbs, protein, fat 等字段，不要包含 meals 数组。
-    2. 如果用户请求完整饮食方案（如“制定今日三餐”），请将每餐详情放入 meals 数组中，每项包含 { "type": "breakfast/lunch/dinner", "food": "...", "calories": 0, ... }。
+    1. 如果用户请求单次饮食建议（如“建议晚餐”），请直接在 JSON 根节点返回 name, calories, carbs, protein, fat 等字段，不要包含 meals 数组。
+    2. 如果用户请求完整饮食方案（如“制定今日三餐”），请将每餐详情放入 meals 数组中，每项包含 { "type": "breakfast/lunch/dinner", "name": "...", "calories": 0, ... }。
     3. 始终根据用户的资料、目标和忌口，给出简短建议。
     `;
 

@@ -104,7 +104,64 @@
           <div class="bento-card macro-box"><span class="ml">脂肪</span><span class="mv">{{ todayIntake.fat }}g</span></div>
       </div>
 
-      <!-- 4. Chart -->
+      <!-- 4. 营养趋势图 -->
+      <div class="bento-card trend-card">
+        <div class="card-header">
+          <span class="card-title">📈 营养趋势</span>
+          <div class="time-range-tabs">
+            <span :class="{ active: trendRange === 7 }" @click="trendRange = 7">周</span>
+            <span :class="{ active: trendRange === 30 }" @click="trendRange = 30">月</span>
+          </div>
+        </div>
+        <div class="metric-tabs">
+          <span
+            v-for="m in metrics"
+            :key="m.key"
+            :class="{ active: trendMetric === m.key }"
+            @click="trendMetric = m.key"
+          >{{ m.label }}</span>
+        </div>
+        <div class="chart-container">
+          <BaseChart :options="trendChartOptions" height="180px" />
+        </div>
+      </div>
+
+      <!-- 5. 营养素分布 + 达标天数 -->
+      <div class="charts-row">
+        <div class="bento-card pie-card">
+          <div class="card-header">
+            <span class="card-title">🥧 今日营养素</span>
+          </div>
+          <BaseChart :options="pieChartOptions" height="160px" />
+          <div class="pie-legend">
+            <div class="legend-item">
+              <span class="dot carbs"></span>
+              <span>碳水 {{ nutritionDist.carbs.percent }}%</span>
+            </div>
+            <div class="legend-item">
+              <span class="dot protein"></span>
+              <span>蛋白 {{ nutritionDist.protein.percent }}%</span>
+            </div>
+            <div class="legend-item">
+              <span class="dot fat"></span>
+              <span>脂肪 {{ nutritionDist.fat.percent }}%</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bento-card bar-card">
+          <div class="card-header">
+            <span class="card-title">📊 达标天数</span>
+          </div>
+          <BaseChart :options="barChartOptions" height="160px" />
+          <div class="bar-summary">
+            <span class="good">✅ 达标 {{goodDays}}天</span>
+            <span class="bad">⚠️ 超标 {{badDays}}天</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. 体重趋势 -->
       <div class="bento-card chart-card">
          <div class="c-header">体重趋势</div>
          <div class="c-content">
@@ -199,10 +256,10 @@ const currentMealDetail = computed(() => {
 })
 
 function handleSlotClick(key) { currentSlot.value = key; recDialogVisible.value = true; }
-function openRecipeLibrary() { 
+function openRecipeLibrary() {
     recDialogVisible.value = false
-    localStorage.setItem('planning_meal_type', currentSlot.value)
-    router.push('/recipes') 
+    dietStore.planningMealType = currentSlot.value
+    router.push('/recipes')
 }
 
 async function triggerOneKeyPlan() {
@@ -232,6 +289,145 @@ const calculateTime = (met) => {
 const progressColor = computed(() => {
     const p = (todayIntake.value.calories / targetCalories.value) * 100
     return p > 100 ? '#ff7675' : p > 85 ? '#fdcb6e' : '#00b894'
+})
+
+// --- 数据可视化相关 ---
+const trendRange = ref(7)
+const trendMetric = ref('calories')
+const metrics = [
+  { key: 'calories', label: '热量' },
+  { key: 'carbs', label: '碳水' },
+  { key: 'protein', label: '蛋白质' },
+  { key: 'fat', label: '脂肪' }
+]
+
+// 营养趋势数据
+const trendData = computed(() => dietStore.getRecentDaysData(trendRange.value))
+
+// 今日营养素分布
+const nutritionDist = computed(() => dietStore.getTodayNutritionDistribution())
+
+// 达标天数统计
+const goodDays = computed(() => {
+  const data = trendData.value
+  const target = targetCalories.value
+  return data.filter(d => d.calories <= target && d.calories > 0).length
+})
+
+const badDays = computed(() => {
+  const data = trendData.value
+  const target = targetCalories.value
+  return data.filter(d => d.calories > target).length
+})
+
+// 趋势图配置
+const trendChartOptions = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: 'rgba(30, 41, 59, 0.9)',
+    borderColor: 'rgba(255,255,255,0.1)',
+    textStyle: { color: '#fff' }
+  },
+  grid: { top: 20, bottom: 25, left: 35, right: 10 },
+  xAxis: {
+    type: 'category',
+    data: trendData.value.map(d => d.label),
+    axisLine: { show: false },
+    axisTick: { show: false },
+    axisLabel: { color: '#94a3b8', fontSize: 10 }
+  },
+  yAxis: {
+    type: 'value',
+    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+    axisLabel: { color: '#94a3b8', fontSize: 10 }
+  },
+  series: [{
+    type: 'line',
+    smooth: true,
+    showSymbol: false,
+    data: trendData.value.map(d => d[trendMetric.value]),
+    lineStyle: { width: 3, color: '#8e7dff' },
+    areaStyle: {
+      color: {
+        type: 'linear',
+        x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [
+          { offset: 0, color: 'rgba(142, 125, 255, 0.3)' },
+          { offset: 1, color: 'rgba(142, 125, 255, 0)' }
+        ]
+      }
+    }
+  }]
+}))
+
+// 饼图配置
+const pieChartOptions = computed(() => {
+  const dist = nutritionDist.value
+  return {
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '60%'],
+      center: ['50%', '50%'],
+      avoidLabelOverlap: false,
+      label: {
+        show: true,
+        position: 'center',
+        formatter: `${dist.totalCalories}\nkcal`,
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#fff',
+        lineHeight: 18
+      },
+      data: [
+        { value: dist.carbs.value || 0, name: '碳水', itemStyle: { color: '#fdcb6e' } },
+        { value: dist.protein.value || 0, name: '蛋白质', itemStyle: { color: '#74b9ff' } },
+        { value: dist.fat.value || 0, name: '脂肪', itemStyle: { color: '#55efc4' } }
+      ]
+    }]
+  }
+})
+
+// 柱状图配置（达标天数）
+const barChartOptions = computed(() => {
+  const data = trendData.value
+  const target = targetCalories.value
+  
+  return {
+    tooltip: { trigger: 'axis' },
+    grid: { top: 20, bottom: 25, left: 35, right: 10 },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => d.label),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#94a3b8', fontSize: 9 }
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 9 }
+    },
+    series: [
+      {
+        type: 'bar',
+        data: data.map(d => ({
+          value: d.calories,
+          itemStyle: {
+            color: d.calories > target ? '#ff7675' : '#00b894',
+            borderRadius: [4, 4, 0, 0]
+          }
+        })),
+        barWidth: '60%'
+      },
+      {
+        type: 'line',
+        data: data.map(() => target),
+        lineStyle: { color: '#fdcb6e', type: 'dashed', width: 2 },
+        showSymbol: false
+      }
+    ]
+  }
 })
 
 const chartOptions = computed(() => ({
@@ -430,4 +626,78 @@ function saveWeight() { userStore.logWeight(newWeight.value); dialogWeightVisibl
 .ai-wait { text-align: center; padding: 20px 0; }
 .pulse-loader { width: 30px; height: 30px; background: var(--primary); border-radius: 50%; margin: 0 auto 10px; animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%, 100% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } }
+
+/* 数据可视化图表样式 */
+.trend-card, .pie-card, .bar-card {
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+}
+
+.time-range-tabs, .metric-tabs {
+  display: flex;
+  gap: 6px;
+  span {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.3s;
+    &.active {
+      background: rgba(142, 125, 255, 0.2);
+      color: #8e7dff;
+    }
+  }
+}
+
+.metric-tabs {
+  margin-bottom: 8px;
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pie-legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      &.carbs { background: #fdcb6e; }
+      &.protein { background: #74b9ff; }
+      &.fat { background: #55efc4; }
+    }
+  }
+}
+
+.bar-summary {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 10px;
+  .good { color: #00b894; }
+  .bad { color: #ff7675; }
+}
 </style>

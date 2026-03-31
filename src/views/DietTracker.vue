@@ -50,7 +50,7 @@
                             <button class="icon-btn fav" :class="{ active: dietStore.isFavorite(item) }" @click="dietStore.toggleFavorite(item)">
                                 <el-icon><StarFilled /></el-icon>
                             </button>
-                            <button class="icon-btn del" @click="dietStore.removeFood(meal.key, idx)"><el-icon><Delete /></el-icon></button>
+                            <button class="icon-btn del" @click="dietStore.removeFood(meal.key, idx, currentDate)"><el-icon><Delete /></el-icon></button>
                         </div>
                     </div>
                 </div>

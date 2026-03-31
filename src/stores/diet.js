@@ -5,77 +5,143 @@ import axios from 'axios'
 
 const API_URL = '/api'
 
+/**
+ * 【Debug 工程师重构】FoodMapper
+ * 1. 引入 _id：解决搜索后索引偏移导致的“指鹿为马”
+ * 2. 字段规范化：解决描述丢失
+ */
+const mapFood = (raw) => {
+  if (!raw) return null;
+  const name = raw.name || raw.title || '未知食物';
+  const description = raw.description || raw.analysis || '';
+  
+  return {
+    _id: raw._id || Math.random().toString(36).substring(2, 11), // 前端唯一标识
+    id: raw.id || null, // 后端数据库 ID
+    name: name,
+    title: name,
+    calories: Number(raw.calories || 0),
+    carbs: Number(raw.carbs || 0),
+    protein: Number(raw.protein || 0),
+    fat: Number(raw.fat || 0),
+    description: description,
+    analysis: description,
+    image: raw.image || null,
+    baseWeight: raw.baseWeight || 0
+  };
+};
+
 export const useDietStore = defineStore('diet', () => {
   const logs = reactive({})
   const favorites = reactive([])
   const systemRecipes = reactive([])
-  
-  // 核心修复：dietPlans 不再在模块顶层初始化，避免串台
   const dietPlans = reactive({})
   const currentUserId = ref(null)
   const pendingMealContext = reactive({ mealType: null, date: null })
+  const planningMealType = ref(null)
 
-  const today = computed(() => {
-    const date = new Date()
-    return date.toISOString().split('T')[0]
-  })
+  const today = computed(() => new Date().toISOString().split('T')[0])
 
-  function setPendingContext(mealType, date) {
-      pendingMealContext.mealType = mealType
-      pendingMealContext.date = date
+  // --- Loaders ---
+  function setLogs(newLogs) { 
+      for (const key in logs) delete logs[key]
+      if (!newLogs) return;
+      Object.keys(newLogs).forEach(date => {
+          logs[date] = {
+              breakfast: (newLogs[date].breakfast || []).map(mapFood),
+              lunch: (newLogs[date].lunch || []).map(mapFood),
+              dinner: (newLogs[date].dinner || []).map(mapFood),
+              snack: (newLogs[date].snack || []).map(mapFood)
+          }
+      })
   }
 
-  function clearPendingContext() {
-      pendingMealContext.mealType = null
-      pendingMealContext.date = null
+  function setFavorites(newFavs) { 
+      const normalized = (newFavs || []).map(mapFood)
+      favorites.splice(0, favorites.length, ...normalized) 
   }
 
-  // 核心修复：加载特定用户的计划
-  function loadPlans(userId) {
-      if (!userId) return
-      currentUserId.value = userId
-      const saved = localStorage.getItem(`diet_plans_${userId}`)
-      if (saved) {
-          Object.assign(dietPlans, JSON.parse(saved))
-      } else {
-          // 清空旧数据，防止切换账号后残留
-          for (const key in dietPlans) delete dietPlans[key]
+  function setPlans(newPlans) {
+      for (const key in dietPlans) delete dietPlans[key]
+      if (newPlans) Object.assign(dietPlans, newPlans)
+  }
+
+  // --- Mutators (Fixed for Date & ID) ---
+  function addFood(mealType, food, targetDate) {
+    const dateKey = targetDate || today.value
+    if (!logs[dateKey]) logs[dateKey] = { breakfast: [], lunch: [], dinner: [], snack: [] }
+    const targetMeal = mealType || 'snack'
+    logs[dateKey][targetMeal].push(mapFood(food))
+    sync()
+  }
+
+  function updateFood(mealType, index, updatedFood, targetDate) {
+      const dateKey = targetDate || today.value
+      if (logs[dateKey] && logs[dateKey][mealType]) {
+          logs[dateKey][mealType][index] = mapFood(updatedFood)
+          sync()
       }
   }
 
-  function getTodayPlans() {
-      const d = today.value
-      if (!dietPlans[d]) {
-          dietPlans[d] = { breakfast: null, lunch: null, dinner: null }
+  function removeFood(mealType, index, targetDate) {
+      const dateKey = targetDate || today.value
+      if (logs[dateKey] && logs[dateKey][mealType]) {
+          logs[dateKey][mealType].splice(index, 1)
+          sync()
       }
-      return dietPlans[d]
   }
 
-  function setMealPlan(mealType, plan) {
-      const d = today.value
+  function toggleFavorite(item) {
+      const normalized = mapFood(item)
+      // 使用名称匹配收藏，因为 AI 产生的同名食物应视为同一个“食谱”
+      const idx = favorites.findIndex(f => f.name === normalized.name)
+      if (idx > -1) favorites.splice(idx, 1)
+      else favorites.push(normalized)
+      sync()
+  }
+
+  function updateFavoriteById(id, updated) {
+      const idx = favorites.findIndex(f => f._id === id)
+      if (idx > -1) {
+          favorites[idx] = mapFood({ ...favorites[idx], ...updated })
+          sync()
+      }
+  }
+
+  function removeFavoriteById(id) {
+      const idx = favorites.findIndex(f => f._id === id)
+      if (idx > -1) {
+          favorites.splice(idx, 1)
+          sync()
+      }
+  }
+
+  function setMealPlan(mealType, plan, targetDate) {
+      const d = targetDate || today.value
       if (!dietPlans[d]) dietPlans[d] = { breakfast: null, lunch: null, dinner: null }
       dietPlans[d][mealType] = plan
-      
-      // 持久化到用户隔离的键中
-      if (currentUserId.value) {
-          localStorage.setItem(`diet_plans_${currentUserId.value}`, JSON.stringify(dietPlans))
-      }
+      sync()
   }
 
-  function reset() {
-      for (const key in logs) delete logs[key]
-      favorites.splice(0, favorites.length)
-      for (const key in dietPlans) delete dietPlans[key]
-      currentUserId.value = null
-  }
-
-  async function fetchRecipes() {
+  // --- Sync & Other ---
+  async function sync() {
       try {
-          const res = await axios.get(`${API_URL}/recipes`)
-          systemRecipes.splice(0, systemRecipes.length, ...res.data)
-      } catch (e) {
-          console.error("Fetch recipes failed", e)
-      }
+          const userStore = useUserStore()
+          if (!userStore.token) return;
+          await axios.put(`${API_URL}/user/sync`, { 
+              dietLogs: logs, 
+              favoriteFoods: favorites,
+              dietPlans: dietPlans
+          }, {
+              headers: { Authorization: `Bearer ${userStore.token}` }
+          })
+      } catch (e) { console.error("Sync failed", e) }
+  }
+
+  async function analyzeFoodWithAI(description) {
+      const userStore = useUserStore()
+      const res = await axios.post(`${API_URL}/analyze-food`, { description, userProfile: userStore.profile })
+      return res.data
   }
 
   const todayIntake = computed(() => {
@@ -89,85 +155,140 @@ export const useDietStore = defineStore('diet', () => {
               f += Number(i.fat || 0)
           })
       })
-      return { calories: c, protein: Math.round(p), carbs: Math.round(cr), fat: Math.round(f) }
+      return { calories: Math.round(c), protein: Math.round(p), carbs: Math.round(cr), fat: Math.round(f) }
   })
 
-  function addFood(mealType, food, targetDate) {
-    const dateKey = targetDate || today.value
-    if (!logs[dateKey]) logs[dateKey] = { breakfast: [], lunch: [], dinner: [], snack: [] }
-    const targetMeal = mealType || 'snack'
-    logs[dateKey][targetMeal].push(food)
-    sync()
-  }
-
-  function updateFood(mealType, index, updatedFood) {
-      if (logs[today.value] && logs[today.value][mealType]) {
-          logs[today.value][mealType][index] = updatedFood
-          sync()
-      }
-  }
-
-  function removeFood(mealType, index) {
-      if (logs[today.value] && logs[today.value][mealType]) {
-          logs[today.value][mealType].splice(index, 1)
-          sync()
-      }
-  }
-
-  async function sync() {
-      try {
-          const userStore = useUserStore()
-          // 同步饮食日志和收藏到后端
-          await axios.put(`${API_URL}/user/sync`, { 
-              dietLogs: logs, 
-              favoriteFoods: favorites 
-          }, {
-              headers: { Authorization: `Bearer ${userStore.token}` }
-          })
-      } catch (e) { console.error("Sync failed", e) }
-  }
-
-  async function analyzeFoodWithAI(description) {
-      const userStore = useUserStore()
-      const res = await axios.post(`${API_URL}/analyze-food`, { description, userProfile: userStore.profile })
-      return res.data
-  }
-
-  function setLogs(newLogs) { 
-      for (const key in logs) delete logs[key]
-      Object.assign(logs, newLogs || {}) 
-  }
-  function setFavorites(newFavs) { favorites.splice(0, favorites.length, ...(newFavs || [])) }
   function isFavorite(item) { 
       const name = item.name || item.title
-      return favorites.some(f => (f.name || f.title) === name) 
+      return favorites.some(f => f.name === name) 
   }
-  function toggleFavorite(item) {
-      const name = item.name || item.title
-      const idx = favorites.findIndex(f => (f.name || f.title) === name)
-      if (idx > -1) {
-          favorites.splice(idx, 1)
-      } else {
-          // 确保推入的对象结构一致，且只推入一次
-          favorites.push({ ...item, title: name, name: name })
+
+  function loadPlans(userId) {
+      if (!userId) return
+      currentUserId.value = userId
+      const saved = localStorage.getItem(`diet_plans_${userId}`)
+      if (saved && Object.keys(dietPlans).length === 0) {
+          Object.assign(dietPlans, JSON.parse(saved))
       }
-      sync()
   }
 
-  function updateFavorite(index, updated) {
-      favorites[index] = { ...favorites[index], ...updated }
-      sync()
+  function getTodayPlans() {
+      const d = today.value
+      if (!dietPlans[d]) dietPlans[d] = { breakfast: null, lunch: null, dinner: null }
+      return dietPlans[d]
   }
 
-  function removeFavorite(index) {
-      favorites.splice(index, 1)
-      sync()
+  function reset() {
+      for (const key in logs) delete logs[key]
+      favorites.splice(0, favorites.length)
+      for (const key in dietPlans) delete dietPlans[key]
+      currentUserId.value = null
+      planningMealType.value = null
   }
 
-  return { 
-      logs, favorites, systemRecipes, today, todayIntake, dietPlans, pendingMealContext,
-      addFood, updateFood, removeFood, analyzeFoodWithAI, setLogs, setFavorites, 
-      toggleFavorite, isFavorite, updateFavorite, removeFavorite, fetchRecipes, setMealPlan, getTodayPlans, loadPlans, reset,
-      setPendingContext, clearPendingContext, sync
+  function setPendingContext(mealType, date) {
+      pendingMealContext.mealType = mealType
+      pendingMealContext.date = date
+  }
+
+  function clearPendingContext() {
+      pendingMealContext.mealType = null
+      pendingMealContext.date = null
+  }
+
+  async function fetchRecipes() {
+      try {
+          const res = await axios.get(`${API_URL}/recipes`)
+          const normalized = (res.data || []).map(mapFood)
+          systemRecipes.splice(0, systemRecipes.length, ...normalized)
+      } catch (e) {
+          console.error("Fetch recipes failed", e)
+      }
+  }
+
+  async function saveSystemRecipe(recipe) {
+      const userStore = useUserStore()
+      if (userStore.role !== 'admin') return
+      try {
+          await axios.post(`${API_URL}/admin/recipes`, mapFood(recipe), {
+              headers: { Authorization: `Bearer ${userStore.token}` }
+          })
+          await fetchRecipes() // 刷新系统库
+      } catch (e) { console.error("Admin save recipe failed", e) }
+  }
+
+  // --- 数据可视化函数 ---
+  
+  // 获取最近 N 天的数据（用于趋势图）
+  function getRecentDaysData(days = 7) {
+    const result = []
+    const todayDate = new Date()
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(todayDate)
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
+      const dayLog = logs[dateStr]
+      
+      let calories = 0, carbs = 0, protein = 0, fat = 0
+      if (dayLog) {
+        Object.values(dayLog).forEach(meal => {
+          if (Array.isArray(meal)) {
+            meal.forEach(item => {
+              calories += Number(item.calories || 0)
+              carbs += Number(item.carbs || 0)
+              protein += Number(item.protein || 0)
+              fat += Number(item.fat || 0)
+            })
+          }
+        })
+      }
+      
+      result.push({
+        date: dateStr,
+        label: `${date.getMonth() + 1}/${date.getDate()}`,
+        calories: Math.round(calories),
+        carbs: Math.round(carbs),
+        protein: Math.round(protein),
+        fat: Math.round(fat)
+      })
+    }
+    return result
+  }
+
+  // 获取今日营养素分布（用于饼图）
+  function getTodayNutritionDistribution() {
+    const intake = todayIntake.value
+    const carbsCal = Math.round(intake.carbs * 4)
+    const proteinCal = Math.round(intake.protein * 4)
+    const fatCal = Math.round(intake.fat * 9)
+    const total = carbsCal + proteinCal + fatCal
+    
+    return {
+      carbs: {
+        value: carbsCal,
+        grams: intake.carbs,
+        percent: total ? Math.round((carbsCal / total) * 100) : 0
+      },
+      protein: {
+        value: proteinCal,
+        grams: intake.protein,
+        percent: total ? Math.round((proteinCal / total) * 100) : 0
+      },
+      fat: {
+        value: fatCal,
+        grams: intake.fat,
+        percent: total ? Math.round((fatCal / total) * 100) : 0
+      },
+      totalCalories: intake.calories
+    }
+  }
+
+  return {
+      logs, favorites, systemRecipes, today, todayIntake, dietPlans, pendingMealContext, planningMealType,
+      addFood, updateFood, removeFood, analyzeFoodWithAI, setLogs, setFavorites, setPlans,
+      toggleFavorite, isFavorite, updateFavoriteById, removeFavoriteById, fetchRecipes, setMealPlan, getTodayPlans, loadPlans, reset,
+      setPendingContext, clearPendingContext, sync, saveSystemRecipe,
+      getRecentDaysData, getTodayNutritionDistribution
   }
 })

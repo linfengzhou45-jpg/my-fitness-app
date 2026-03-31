@@ -9,7 +9,7 @@
             <div class="tab" :class="{ active: tab === 'system' }" @click="tab = 'system'">推荐</div>
             <div class="tab" :class="{ active: tab === 'fav' }" @click="tab = 'fav'">收藏 ({{ dietStore.favorites.length }})</div>
         </div>
-        <div v-if="tab === 'fav'" class="add-custom-btn" @click="createNewRecipe">
+        <div v-if="tab === 'fav' || (tab === 'system' && userStore.role === 'admin')" class="add-custom-btn" @click="createNewRecipe">
             <el-icon><Plus /></el-icon>
         </div>
     </div>
@@ -47,8 +47,8 @@
             </div>
 
             <div class="d-title-row">
-                <input v-if="canEdit" v-model="selected.title" class="title-input" placeholder="输入名称..." @blur="autoSave" />
-                <h3 v-else class="static-title">{{ selected.title || selected.name }}</h3>
+                <input v-if="canEdit" v-model="selected.name" class="title-input" placeholder="输入名称..." @blur="autoSave" />
+                <h3 v-else class="static-title">{{ selected.name }}</h3>
                 
                 <div v-if="tab === 'fav'" class="d-actions-top">
                     <el-button type="danger" link :icon="Delete" @click="confirmDelete(editingIndex)" />
@@ -120,11 +120,12 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useDietStore } from '../stores/diet'
+import { useUserStore } from '../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Delete, Camera, Plus, Star, StarFilled } from '@element-plus/icons-vue'
 import { processImage } from '../utils/compress'
 
-const dietStore = useDietStore(); const router = useRouter(); const route = useRoute()
+const dietStore = useDietStore(); const userStore = useUserStore(); const router = useRouter(); const route = useRoute()
 const searchQuery = ref(''); const tab = ref(route.query.tab || 'system')
 const visible = ref(false); const selected = ref(null)
 const editingIndex = ref(-1); const fileInput = ref(null)
@@ -153,13 +154,19 @@ onMounted(() => {
     editingIndex.value = -1
 })
 
-const isPlanning = computed(() => !!localStorage.getItem('planning_meal_type'))
+const isPlanning = computed(() => !!dietStore.planningMealType)
 const planningLabel = computed(() => {
-    const t = localStorage.getItem('planning_meal_type')
+    const t = dietStore.planningMealType
     return { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' }[t] || ''
 })
 
-const canEdit = computed(() => tab.value === 'fav')
+const canEdit = computed(() => {
+    // 1. 如果在“收藏”页，所有人都可以编辑自己的收藏
+    if (tab.value === 'fav') return true;
+    // 2. 如果在“推荐”页，只有管理员可以编辑
+    if (tab.value === 'system' && userStore.role === 'admin') return true;
+    return false;
+})
 
 const filtered = computed(() => {
     // 使用解构赋值确保返回新数组副本
@@ -174,7 +181,12 @@ const isCurrentFavorite = computed(() => {
 })
 
 function showDetail(r, index) { 
-    selected.value = JSON.parse(JSON.stringify(r));
+    // 强迫症：确保打开详情时，老数据的 analysis 字段被映射到 description
+    const item = JSON.parse(JSON.stringify(r));
+    if (item.analysis && !item.description) {
+        item.description = item.analysis;
+    }
+    selected.value = item;
     editingIndex.value = index; 
     visible.value = true; 
     selectedMeal.value = dietStore.pendingMealContext.mealType || 'snack'
@@ -195,31 +207,21 @@ async function handleImgChange(e) {
 }
 
 function autoSave() {
-    if (!canEdit.value || editingIndex.value === -1) return
-    dietStore.updateFavorite(editingIndex.value, selected.value)
-    Object.assign(dietStore.favorites[editingIndex.value], selected.value)
+    if (!canEdit.value || !selected.value) return
+    dietStore.updateFavoriteById(selected.value._id, selected.value)
 }
 
 function toggleFavorite() {
     if (!selected.value) return
-    const item = { 
-        name: selected.value.title || selected.value.name,
-        calories: selected.value.calories,
-        carbs: selected.value.carbs,
-        protein: selected.value.protein,
-        fat: selected.value.fat,
-        image: selected.value.image,
-        description: selected.value.description
-    }
-    dietStore.toggleFavorite(item)
-    if (tab.value === 'fav' && !dietStore.isFavorite(item)) {
+    dietStore.toggleFavorite(selected.value)
+    if (tab.value === 'fav' && !dietStore.isFavorite(selected.value)) {
         visible.value = false
     }
 }
 
 function createNewRecipe() {
     const newR = {
-        title: '新食谱',
+        name: '新食谱',
         calories: 0,
         carbs: 0,
         protein: 0,
@@ -227,23 +229,24 @@ function createNewRecipe() {
         image: '',
         description: ''
     }
+    // 自动通过 store 处理
     dietStore.favorites.push(newR)
     dietStore.sync()
     showDetail(newR, dietStore.favorites.length - 1)
 }
 
-function confirmDelete(index) {
+function confirmDelete() {
     ElMessageBox.confirm('确定要从收藏中删除吗？', '提示', { 
         confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' 
     }).then(() => {
-        dietStore.removeFavorite(index);
+        dietStore.removeFavoriteById(selected.value._id);
         ElMessage.success('已删除');
         visible.value = false;
     });
 }
 
 function savePlan() {
-    const t = localStorage.getItem('planning_meal_type')
+    const t = dietStore.planningMealType
     const foodData = {
         food: selected.value.title || selected.value.name,
         calories: selected.value.calories,
@@ -252,21 +255,24 @@ function savePlan() {
         fat: selected.value.fat
     }
     dietStore.setMealPlan(t, foodData)
-    localStorage.removeItem('planning_meal_type')
+    dietStore.planningMealType = null
     ElMessage.success('计划已更新'); visible.value = false; router.push('/dashboard')
 }
 
 function addLog() {
+    if (isPlanning.value) {
+        savePlan()
+        return
+    }
     const mealType = dietStore.pendingMealContext.mealType || selectedMeal.value
     dietStore.addFood(
-        mealType, 
-        { ...selected.value, name: selected.value.title || selected.value.name },
+        mealType,
+        selected.value,
         dietStore.pendingMealContext.date
     )
     dietStore.clearPendingContext()
     ElMessage.success('已添加记录'); visible.value = false
-}
-</script>
+}</script>
 
 <style scoped>
 .recipe-container { 

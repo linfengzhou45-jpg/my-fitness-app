@@ -118,6 +118,7 @@ export const useUserStore = defineStore('user', () => {
       
       if (userData.dietLogs) dietStore.setLogs(userData.dietLogs)
       if (userData.favoriteFoods) dietStore.setFavorites(userData.favoriteFoods)
+      if (userData.dietPlans) dietStore.setPlans(userData.dietPlans)
   }
 
   const syncData = async () => {
